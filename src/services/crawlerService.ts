@@ -19,7 +19,7 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       contentSelectors: ['article', '.article-content', '.post-content', '.entry-content'],
       imageSelectors: ['img'],
       removeSelectors: ['.advertisement', '.social-share', '.comments'],
-      formats: ['html'] // Add the required formats property
+      formats: ['html' as const] // Explicitly type as const to match the expected literal type
     };
 
     const result = await client.crawlUrl(url, {
@@ -27,9 +27,11 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       scrapeOptions
     });
     
-    // Type guard to check if the response has data
+    // Type guard to check if the response has data and the expected structure
     if ('data' in result && Array.isArray(result.data) && result.data.length > 0) {
-      return result.data[0].content || null;
+      const document = result.data[0];
+      // Access the HTML content from the document
+      return document.html || null;
     }
     
     return null;
