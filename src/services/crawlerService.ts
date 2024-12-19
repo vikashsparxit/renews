@@ -4,28 +4,26 @@ import axios from 'axios';
 
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
+interface CrawlResult {
+  success: boolean;
+  data: string | null;
+  error?: string;
+}
+
 export const crawlWithFallback = async (url: string): Promise<string | null> => {
   try {
-    // First try Firecrawl if API key is available
-    const firecrawlContent = await crawlWithFirecrawl(url);
-    if (firecrawlContent) return firecrawlContent;
-
-    // Fallback to direct fetching with CORS proxy
-    console.log('Falling back to CORS proxy for content fetching');
-    const response = await axios.get(`${CORS_PROXY}${encodeURIComponent(url)}`);
-    const html = response.data;
+    // Check preferred crawling method
+    const preferredMethod = localStorage.getItem('crawling_method') || 'firecrawl';
     
-    // Extract main content using basic DOM parsing
-    const tempDiv = document.createElement('div');
-    tempDiv.innerHTML = html;
-    
-    // Try to find the main content area
-    const mainContent = tempDiv.querySelector('article, .article, .post-content, .entry-content');
-    if (mainContent) {
-      return mainContent.innerHTML;
+    if (preferredMethod === 'firecrawl') {
+      console.log('Attempting to crawl with Firecrawl...');
+      const firecrawlContent = await crawlWithFirecrawl(url);
+      if (firecrawlContent) return firecrawlContent;
     }
-    
-    return null;
+
+    // Fallback to CORS proxy
+    console.log('Falling back to CORS proxy for content fetching');
+    return await crawlWithCorsProxy(url);
   } catch (error) {
     console.error('Error crawling content:', error);
     return null;
@@ -45,42 +43,62 @@ const crawlWithFirecrawl = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
-        contentTypes: ['article', 'images'],
-        contentSelectors: {
-          article: 'article, .article, .post-content, .entry-content',
-          images: 'img'
-        }
+        selectors: ['article', '.article', '.post-content', '.entry-content', 'img']
       }
     });
 
     if (result.success && result.data?.[0]) {
       const crawledData = result.data[0];
-      let content = '';
+      let content = crawledData.html || '';
       
-      // Extract article content from the crawled data
-      if (crawledData.content?.article) {
-        content = crawledData.content.article;
+      // If no content was found, return null
+      if (!content.trim()) {
+        return null;
       }
       
-      // Add images if available
-      if (crawledData.content?.images) {
-        const images = Array.isArray(crawledData.content.images) 
-          ? crawledData.content.images 
-          : [crawledData.content.images];
-          
-        images.forEach((img: string) => {
-          if (!content.includes(img)) {
-            content = `<img src="${img}" alt="" class="my-4 max-w-full" />${content}`;
-          }
-        });
-      }
-      
-      return content || null;
+      return content;
     }
     
     return null;
   } catch (error) {
     console.error('Error using Firecrawl:', error);
+    return null;
+  }
+};
+
+const crawlWithCorsProxy = async (url: string): Promise<string | null> => {
+  try {
+    const response = await axios.get(`${CORS_PROXY}${encodeURIComponent(url)}`);
+    const html = response.data;
+    
+    // Create a temporary element to parse the HTML
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(html, 'text/html');
+    
+    // Try to find the main content area
+    const selectors = ['article', '.article', '.post-content', '.entry-content'];
+    let content: string | null = null;
+    
+    for (const selector of selectors) {
+      const element = doc.querySelector(selector);
+      if (element) {
+        content = element.innerHTML;
+        break;
+      }
+    }
+    
+    // If no content was found with selectors, use the body content
+    if (!content) {
+      content = doc.body.innerHTML;
+    }
+    
+    // Process images to ensure they have absolute URLs
+    const baseUrl = new URL(url);
+    content = content.replace(/src="\/([^"]*)"/g, `src="${baseUrl.origin}/$1"`);
+    
+    return content;
+  } catch (error) {
+    console.error('Error using CORS proxy:', error);
     return null;
   }
 };
