@@ -9,6 +9,7 @@ import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { KeywordManager } from "@/components/KeywordManager";
 import { ArticlePreview } from "@/components/ArticlePreview";
 import { Settings } from "@/components/Settings";
+import { RSSFeedManager } from "@/components/RSSFeedManager";
 import { useScheduleStore } from "@/services/rssService";
 import { toast } from "sonner";
 import { useEffect, useState, useCallback } from "react";

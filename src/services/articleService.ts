@@ -4,6 +4,8 @@ import { toast } from "sonner";
 import { getApiKey } from './storageService';
 import FirecrawlApp from '@mendable/firecrawl-js';
 
+const WP_API_ENDPOINT = 'https://surinamnews.com/wp-json/wp/v2'; // Add the WordPress API endpoint
+
 export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);
   
@@ -44,9 +46,10 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
-        contentTypes: ['text', 'image'],
-        contentSelector: 'article, .article, .post-content, .entry-content',
-        imageSelector: 'img'
+        elements: {
+          content: 'article, .article, .post-content, .entry-content',
+          images: 'img'
+        }
       }
     });
 
@@ -55,13 +58,13 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       let content = '';
       
       // Extract article content
-      if (crawledData.text) {
-        content = crawledData.text;
+      if (crawledData.content) {
+        content = crawledData.content;
       }
       
-      // Process and embed images
-      if (crawledData.images && Array.isArray(crawledData.images)) {
-        crawledData.images.forEach((imgSrc: string) => {
+      // Process and embed images if available
+      if (crawledData.elements?.images && Array.isArray(crawledData.elements.images)) {
+        crawledData.elements.images.forEach((imgSrc: string) => {
           if (!content.includes(imgSrc)) {
             content = `<img src="${imgSrc}" alt="" class="my-4 max-w-full" />${content}`;
           }
