@@ -35,14 +35,18 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
           '#main-content',
           '.main-content',
           '.article-body',
-          '.story-content'
+          '.story-content',
+          '.post',
+          '.news-content'
         ],
         imageSelectors: [
           'img',
           '.article-image',
           '.featured-image',
           '.post-image',
-          'picture source'
+          'picture source',
+          '.wp-post-image',
+          '.attachment-post-thumbnail'
         ],
         removeSelectors: [
           '.advertisement',
@@ -54,9 +58,15 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
           '.navigation',
           '.menu',
           '.footer',
-          '.header'
+          '.header',
+          '.ad',
+          '.widget'
         ],
-        formats: ["html", "markdown"] as CrawlFormat[]
+        formats: ["html", "markdown"] as CrawlFormat[],
+        waitForSelector: 'article, .article-content, .post-content',
+        includeImages: true,
+        followLinks: false,
+        maxDepth: 1
       };
 
       console.log('Crawling with Firecrawl using options:', scrapeOptions);
@@ -68,7 +78,18 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       if ('data' in result && Array.isArray(result.data) && result.data.length > 0) {
         const document = result.data[0];
         console.log('Successfully crawled content with Firecrawl');
-        return document.html || null;
+        
+        // Process and embed images in the HTML content
+        let processedContent = document.html || '';
+        if (document.images && Array.isArray(document.images)) {
+          document.images.forEach((img: string) => {
+            if (!processedContent.includes(img)) {
+              processedContent += `<img src="${img}" class="article-image" loading="lazy" />`;
+            }
+          });
+        }
+        
+        return processedContent;
       }
     }
 
@@ -92,20 +113,37 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       '#main-content',
       '.main-content',
       '.article-body',
-      '.story-content'
+      '.story-content',
+      '.post',
+      '.news-content'
     ];
     
-    // Also look for images
+    // Process images
     const images = doc.querySelectorAll('img');
     const imageUrls = Array.from(images).map(img => img.src);
     console.log('Found images:', imageUrls);
     
+    // Find main content
+    let mainContent = null;
     for (const selector of selectors) {
       const element = doc.querySelector(selector);
       if (element) {
         console.log('Found content using selector:', selector);
-        return element.innerHTML;
+        mainContent = element;
+        break;
       }
+    }
+    
+    if (mainContent) {
+      // Process the content to ensure images are properly embedded
+      let processedContent = mainContent.innerHTML;
+      imageUrls.forEach(imgUrl => {
+        if (!processedContent.includes(imgUrl)) {
+          processedContent += `<img src="${imgUrl}" class="article-image" loading="lazy" />`;
+        }
+      });
+      
+      return processedContent;
     }
     
     console.log('No content found with any selector');

@@ -26,19 +26,20 @@ const initDB = async (): Promise<void> => {
       reject(new Error('Failed to open IndexedDB'));
     };
 
-    request.onsuccess = (event: Event) => {
+    request.onsuccess = (event) => {
       const target = event.target as IDBOpenDBRequest;
       db = target.result;
       console.log('IndexedDB opened successfully');
       resolve();
     };
 
-    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+    request.onupgradeneeded = (event) => {
       const target = event.target as IDBOpenDBRequest;
       const database = target.result;
       
       if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME, { keyPath: 'url' });
+        const store = database.createObjectStore(STORE_NAME, { keyPath: 'url' });
+        store.createIndex('timestamp', 'timestamp');
         console.log('Article store created successfully');
       }
     };
@@ -83,9 +84,8 @@ export const getArticleFromCache = async (url: string): Promise<Article | undefi
     const store = transaction.objectStore(STORE_NAME);
     const request = store.get(url);
 
-    request.onsuccess = (event: Event) => {
-      const target = event.target as IDBRequest;
-      resolve(target.result);
+    request.onsuccess = () => {
+      resolve(request.result);
     };
 
     request.onerror = (event) => {
@@ -110,10 +110,8 @@ export const clearExpiredCache = async (): Promise<void> => {
     const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
 
-    request.onsuccess = (event: Event) => {
-      const target = event.target as IDBRequest;
-      const cursor = target.result as IDBCursorWithValue;
-      
+    request.onsuccess = () => {
+      const cursor = request.result;
       if (cursor) {
         const article = cursor.value as Article;
         if (now - new Date(article.cacheDate).getTime() > TWO_DAYS) {
