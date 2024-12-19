@@ -1,4 +1,7 @@
+import axios from 'axios';
 import { toast } from "sonner";
+
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 export interface Article {
   id: string;
@@ -17,7 +20,6 @@ export interface RSSFeed {
   lastUpdate: Date;
 }
 
-// Simulated RSS feeds for now
 export const feeds: RSSFeed[] = [
   {
     name: "Starnieuws",
@@ -33,45 +35,70 @@ export const feeds: RSSFeed[] = [
   },
 ];
 
-// Simulated articles for now
-export const articles: Article[] = [
-  {
-    id: "1",
-    title: "President Santokhi addresses parliament",
-    content: "Lorem ipsum...",
-    source: "Starnieuws",
-    url: "https://www.starnieuws.com/article1",
-    status: "pending",
-    timestamp: new Date(),
-  },
-  {
-    id: "2",
-    title: "New developments in Suriname's economy",
-    content: "Lorem ipsum...",
-    source: "Waterkant",
-    url: "https://www.waterkant.net/article2",
-    status: "published",
-    timestamp: new Date(Date.now() - 30 * 60000),
-  },
-];
+const parseXMLToArticles = (xml: string, source: string): Article[] => {
+  const parser = new DOMParser();
+  const xmlDoc = parser.parseFromString(xml, "text/xml");
+  const items = xmlDoc.getElementsByTagName("item");
+  
+  console.log(`Parsing ${items.length} items from ${source}`);
+  
+  return Array.from(items).map((item, index) => ({
+    id: `${source}-${index}-${Date.now()}`,
+    title: item.getElementsByTagName("title")[0]?.textContent || "No title",
+    content: item.getElementsByTagName("description")[0]?.textContent || "No content",
+    source,
+    url: item.getElementsByTagName("link")[0]?.textContent || "#",
+    status: "pending" as const,
+    timestamp: new Date(item.getElementsByTagName("pubDate")[0]?.textContent || Date.now()),
+  }));
+};
 
 export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   console.log("Fetching RSS feeds...");
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return feeds;
+  
+  const updatedFeeds = [...feeds];
+  
+  for (const feed of updatedFeeds) {
+    try {
+      const response = await axios.get(`${CORS_PROXY}${encodeURIComponent(feed.url)}`);
+      console.log(`Successfully fetched ${feed.name}`);
+      feed.status = "active";
+      feed.lastUpdate = new Date();
+    } catch (error) {
+      console.error(`Error fetching ${feed.name}:`, error);
+      feed.status = "error";
+      toast.error(`Failed to fetch ${feed.name}`);
+    }
+  }
+  
+  return updatedFeeds;
 };
 
 export const fetchArticles = async (): Promise<Article[]> => {
   console.log("Fetching articles...");
-  // Simulate API call
-  await new Promise((resolve) => setTimeout(resolve, 1000));
-  return articles;
+  const articles: Article[] = [];
+  
+  for (const feed of feeds) {
+    try {
+      const response = await axios.get(`${CORS_PROXY}${encodeURIComponent(feed.url)}`);
+      const feedArticles = parseXMLToArticles(response.data, feed.name);
+      articles.push(...feedArticles);
+      console.log(`Successfully parsed ${feedArticles.length} articles from ${feed.name}`);
+    } catch (error) {
+      console.error(`Error fetching articles from ${feed.name}:`, error);
+      toast.error(`Failed to fetch articles from ${feed.name}`);
+    }
+  }
+  
+  // Sort articles by timestamp, newest first
+  return articles.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 };
 
 export const refreshFeeds = async (): Promise<void> => {
-  console.log("Refreshing feeds...");
-  // Simulate refresh
-  await new Promise((resolve) => setTimeout(resolve, 1500));
+  console.log("Manually refreshing feeds...");
+  await Promise.all([
+    fetchFeeds(),
+    fetchArticles()
+  ]);
   toast.success("Feeds refreshed successfully");
 };
