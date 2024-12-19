@@ -18,21 +18,18 @@ export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
   const { interval, setInterval, lastFetch } = useScheduleStore();
   const [inputInterval, setInputInterval] = useState(interval.toString());
-  const [hasRequiredKeys, setHasRequiredKeys] = useState(false);
   
   const refreshFeeds = useCallback(() => {
     refresh();
   }, [refresh]);
 
   useEffect(() => {
-    if (!hasRequiredKeys) return;
-    
     const timerId = window.setInterval(() => {
       refreshFeeds();
     }, interval * 60 * 1000);
 
     return () => window.clearInterval(timerId);
-  }, [interval, refreshFeeds, hasRequiredKeys]);
+  }, [interval, refreshFeeds]);
 
   const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -47,14 +44,6 @@ export const Dashboard = () => {
   const handleHoldArticle = async (articleId: string) => {
     toast.success('Article held from publishing');
   };
-
-  if (!hasRequiredKeys) {
-    return (
-      <div className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50">
-        <RequiredKeysModal onComplete={() => setHasRequiredKeys(true)} />
-      </div>
-    );
-  }
 
   if (isLoading) {
     return (
@@ -240,4 +229,3 @@ export const Dashboard = () => {
       </div>
     </div>
   );
-};

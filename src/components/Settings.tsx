@@ -112,7 +112,7 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
         </DialogHeader>
         
         {!hasAllKeys && (
-          <Alert variant="warning" className="mb-4">
+          <Alert className="mb-4">
             <AlertTriangle className="h-4 w-4" />
             <AlertDescription>
               Some API keys are missing. The application may have limited functionality until all keys are provided.
