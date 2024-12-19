@@ -3,7 +3,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
-import { format } from 'date-fns';
+import { formatDistanceToNow } from 'date-fns';
 import { toast } from "sonner";
 import { RSSFeed } from '@/services/rssService';
 
@@ -27,7 +27,7 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
     }
 
     try {
-      new URL(newFeedUrl); // Validate URL format
+      new URL(newFeedUrl);
       onAddFeed(newFeedUrl);
       setNewFeedUrl('');
       toast.success('Feed added successfully');
@@ -46,7 +46,12 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
           placeholder="Enter RSS feed URL"
           className="flex-1"
         />
-        <Button onClick={handleAddFeed}>Add Feed</Button>
+        <Button 
+          onClick={handleAddFeed}
+          className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+        >
+          Add Feed
+        </Button>
       </div>
       
       <div className="space-y-4">
@@ -57,11 +62,14 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
               <p className="text-sm text-muted-foreground">{feed.url}</p>
             </div>
             <div className="flex items-center gap-2">
-              <Badge variant={feed.status === "active" ? "default" : "destructive"}>
-                {feed.status}
+              <Badge 
+                variant={feed.status === "active" ? "default" : "destructive"}
+                className={feed.status === "active" ? "bg-green-600" : ""}
+              >
+                {feed.status === "active" ? "ACTIVE" : "ERROR"}
               </Badge>
-              <span className="text-sm text-muted-foreground">
-                {format(feed.lastUpdate, "HH:mm:ss")}
+              <span className="text-xs text-muted-foreground">
+                {formatDistanceToNow(feed.lastUpdate)} ago
               </span>
               <Button
                 variant="ghost"

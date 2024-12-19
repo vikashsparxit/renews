@@ -72,11 +72,34 @@ export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   // Clear expired cache entries
   await clearExpiredCache();
   
-  return RSS_FEEDS.map(feed => ({
-    ...feed,
-    status: 'active',
-    lastUpdate: new Date()
-  }));
+  const feedStatuses = await Promise.all(
+    RSS_FEEDS.map(async (feed) => {
+      try {
+        const response = await axios.get(`${CORS_PROXY}${feed.url}`);
+        const parser = new XMLParser();
+        const result = parser.parse(response.data);
+        
+        if (!result.rss?.channel) {
+          throw new Error('Invalid RSS feed format');
+        }
+        
+        return {
+          ...feed,
+          status: 'active' as const,
+          lastUpdate: new Date()
+        };
+      } catch (error) {
+        console.error(`Error checking feed ${feed.url}:`, error);
+        return {
+          ...feed,
+          status: 'error' as const,
+          lastUpdate: new Date()
+        };
+      }
+    })
+  );
+
+  return feedStatuses;
 };
 
 export const fetchArticles = async (): Promise<Article[]> => {
