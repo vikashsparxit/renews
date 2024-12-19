@@ -48,7 +48,7 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
         />
         <Button 
           onClick={handleAddFeed}
-          className="bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          className="bg-primary hover:bg-primary/90 text-white font-medium"
         >
           Add Feed
         </Button>
@@ -57,25 +57,25 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
       <div className="space-y-4">
         {feeds?.map((feed) => (
           <div key={feed.url} className="flex items-center justify-between">
-            <div>
+            <div className="space-y-2">
               <h3 className="font-medium">{feed.name}</h3>
               <p className="text-sm text-muted-foreground">{feed.url}</p>
+              <div className="text-xs text-muted-foreground">
+                {formatDistanceToNow(feed.lastUpdate)} ago
+              </div>
             </div>
             <div className="flex items-center gap-2">
               <Badge 
                 variant={feed.status === "active" ? "default" : "destructive"}
-                className={feed.status === "active" ? "bg-green-600" : ""}
+                className={feed.status === "active" ? "bg-success hover:bg-success/90" : ""}
               >
                 {feed.status === "active" ? "ACTIVE" : "ERROR"}
               </Badge>
-              <span className="text-xs text-muted-foreground">
-                {formatDistanceToNow(feed.lastUpdate)} ago
-              </span>
               <Button
                 variant="ghost"
                 size="icon"
                 onClick={() => onDeleteFeed(feed.url)}
-                className="text-red-500 hover:text-red-700"
+                className="text-destructive hover:text-destructive/90"
               >
                 <Trash2 className="h-4 w-4" />
               </Button>

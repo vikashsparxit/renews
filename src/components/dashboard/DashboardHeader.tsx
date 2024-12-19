@@ -20,10 +20,10 @@ export const DashboardHeader = ({
 }: DashboardHeaderProps) => {
   return (
     <div className="flex justify-between items-center">
-      <h1 className="text-2xl font-bold">ReNews Dashboard</h1>
+      <h1 className="text-2xl font-bold text-primary">ReNews Dashboard</h1>
       <div className="flex items-center gap-4">
         <div className="flex items-center gap-2">
-          <Clock className="h-4 w-4" />
+          <Clock className="h-4 w-4 text-primary" />
           <Input
             type="number"
             min="1"
@@ -37,13 +37,13 @@ export const DashboardHeader = ({
         <Button 
           onClick={onRefresh} 
           disabled={isRefreshing} 
-          className="gap-2 bg-blue-600 hover:bg-blue-700 text-white font-medium"
+          className="gap-2 bg-primary hover:bg-primary/90 text-white font-medium"
         >
           <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
           Refresh Feeds
         </Button>
         <NotificationDropdown />
-        <Settings icon={<Key className="h-4 w-4" />} />
+        <Settings icon={<Key className="h-4 w-4 text-primary" />} />
       </div>
     </div>
   );

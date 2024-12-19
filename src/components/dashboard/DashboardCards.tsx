@@ -15,7 +15,7 @@ export const DashboardCards = ({ feeds, lastFetch }: DashboardCardsProps) => {
     <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
       <Card>
         <CardHeader>
-          <CardTitle>Keyword Management</CardTitle>
+          <CardTitle className="text-primary">Keyword Management</CardTitle>
         </CardHeader>
         <CardContent>
           {!feeds?.length ? (
@@ -31,7 +31,7 @@ export const DashboardCards = ({ feeds, lastFetch }: DashboardCardsProps) => {
 
       <Card>
         <CardHeader>
-          <CardTitle className="flex items-center gap-2">
+          <CardTitle className="flex items-center gap-2 text-primary">
             <Rss className="h-5 w-5" />
             RSS Feeds Status
           </CardTitle>
@@ -50,7 +50,7 @@ export const DashboardCards = ({ feeds, lastFetch }: DashboardCardsProps) => {
             />
           )}
           {lastFetch && (
-            <div className="text-sm text-muted-foreground mt-4">
+            <div className="text-sm text-muted-foreground mt-4 italic">
               Last fetch: {formatDistanceToNow(lastFetch)} ago
             </div>
           )}
