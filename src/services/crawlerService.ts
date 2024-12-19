@@ -6,6 +6,16 @@ interface CrawlResult {
   images: string[];
 }
 
+type CrawlFormat = 
+  | "html" 
+  | "markdown" 
+  | "rawHtml" 
+  | "content" 
+  | "links" 
+  | "screenshot" 
+  | "screenshot@fullPage" 
+  | "extract";
+
 export const crawlWithFallback = async (url: string): Promise<string | null> => {
   try {
     console.log('Starting crawl for URL:', url);
@@ -21,17 +31,32 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
           '.post-content',
           '.entry-content',
           '.content',
-          'main'
+          'main',
+          '#main-content',
+          '.main-content',
+          '.article-body',
+          '.story-content'
         ],
-        imageSelectors: ['img'],
+        imageSelectors: [
+          'img',
+          '.article-image',
+          '.featured-image',
+          '.post-image',
+          'picture source'
+        ],
         removeSelectors: [
           '.advertisement',
           '.social-share',
           '.comments',
           '.related-posts',
-          '.sidebar'
+          '.sidebar',
+          '.nav',
+          '.navigation',
+          '.menu',
+          '.footer',
+          '.header'
         ],
-        formats: ['html']
+        formats: ["html", "markdown"] as CrawlFormat[]
       };
 
       console.log('Crawling with Firecrawl using options:', scrapeOptions);
@@ -63,8 +88,17 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       '.post-content',
       '.entry-content',
       '.content',
-      'main'
+      'main',
+      '#main-content',
+      '.main-content',
+      '.article-body',
+      '.story-content'
     ];
+    
+    // Also look for images
+    const images = doc.querySelectorAll('img');
+    const imageUrls = Array.from(images).map(img => img.src);
+    console.log('Found images:', imageUrls);
     
     for (const selector of selectors) {
       const element = doc.querySelector(selector);
