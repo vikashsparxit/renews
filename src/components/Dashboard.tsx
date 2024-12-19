@@ -12,6 +12,7 @@ import { DashboardHeader } from "./dashboard/DashboardHeader";
 import { ArticleList } from "./dashboard/ArticleList";
 import { ScheduledArticleList } from "./dashboard/ScheduledArticleList";
 import { getApiKey } from "@/services/storageService";
+import { publishToWordPress } from "@/services/wordpressService";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();

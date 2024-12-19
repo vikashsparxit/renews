@@ -8,7 +8,7 @@ import { Settings } from "@/components/Settings";
 import { Switch } from "@/components/ui/switch";
 import { Label } from "@/components/ui/label";
 import { useEffect, useState } from "react";
-import { getAutoSchedule, saveAutoSchedule } from "@/services/storageService";
+import { getAutoSchedule, saveAutoSchedule, getApiKey } from "@/services/storageService";
 
 interface ScheduledArticleListProps {
   articles: Article[];
