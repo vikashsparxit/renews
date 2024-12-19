@@ -2,6 +2,7 @@ import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { useKeywordStore } from './keywordService';
 import { create } from 'zustand';
+import { subHours } from 'date-fns';
 
 export interface RSSFeed {
   name: string;
@@ -28,7 +29,7 @@ interface ScheduleStore {
 }
 
 export const useScheduleStore = create<ScheduleStore>((set) => ({
-  interval: 10, // Default 10 minutes
+  interval: 10,
   setInterval: (minutes) => set({ interval: minutes }),
   lastFetch: null,
   setLastFetch: (date) => set({ lastFetch: date }),
@@ -53,6 +54,11 @@ const containsKeyword = (text: string, keywords: Array<{ text: string, active: b
   return activeKeywords.some(keyword => lowerText.includes(keyword.text.toLowerCase()));
 };
 
+const isWithinLast48Hours = (date: Date) => {
+  const fortyEightHoursAgo = subHours(new Date(), 48);
+  return date >= fortyEightHoursAgo;
+};
+
 export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   console.log('Fetching RSS feeds...');
   useScheduleStore.getState().setLastFetch(new Date());
@@ -64,7 +70,7 @@ export const fetchFeeds = async (): Promise<RSSFeed[]> => {
 };
 
 export const fetchArticles = async (): Promise<Article[]> => {
-  console.log('Fetching articles...');
+  console.log('Fetching articles from the last 48 hours...');
   const parser = new XMLParser();
   const articles: Article[] = [];
   const keywords = useKeywordStore.getState().keywords;
@@ -90,8 +96,9 @@ export const fetchArticles = async (): Promise<Article[]> => {
           url: item.link
         }))
         .filter((article: Article) => 
-          containsKeyword(article.title, keywords) || 
-          containsKeyword(article.content, keywords)
+          isWithinLast48Hours(article.timestamp) && 
+          (containsKeyword(article.title, keywords) || 
+          containsKeyword(article.content, keywords))
         );
 
       articles.push(...feedArticles);
@@ -101,7 +108,8 @@ export const fetchArticles = async (): Promise<Article[]> => {
     }
   }
 
-  return articles;
+  // Sort articles by timestamp, newest first
+  return articles.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());
 };
 
 export const refreshFeeds = async (): Promise<void> => {
