@@ -1,11 +1,22 @@
 import axios from 'axios';
-import { Article } from './rssService';
 import { toast } from "sonner";
 import { getApiKey } from './storageService';
-import FirecrawlApp from '@mendable/firecrawl-js';
 import { getArticleFromCache, saveArticleToCache } from './articleCacheService';
 import { crawlWithFallback } from './crawlerService';
 import { publishToWordPress } from './wordpressService';
+
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  rewrittenContent?: string;
+  source: string;
+  timestamp: Date;
+  status: 'pending' | 'published' | 'rejected' | 'scheduled';
+  url: string;
+  scheduledTime?: Date;
+  isNew?: boolean;
+}
 
 export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);

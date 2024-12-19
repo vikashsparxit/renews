@@ -1,4 +1,4 @@
-import { FirecrawlClient } from '@mendable/firecrawl-js';
+import FirecrawlApp from '@mendable/firecrawl-js';
 import { getApiKey } from './storageService';
 
 interface CrawlResult {
@@ -6,14 +6,14 @@ interface CrawlResult {
   images: string[];
 }
 
-export const crawlArticle = async (url: string): Promise<CrawlResult> => {
+export const crawlWithFallback = async (url: string): Promise<string | null> => {
   try {
     const firecrawlKey = await getApiKey('firecrawl');
     if (!firecrawlKey) {
       throw new Error('Firecrawl API key not found');
     }
 
-    const client = new FirecrawlClient(firecrawlKey);
+    const client = new FirecrawlApp(firecrawlKey);
     
     const scrapeOptions = {
       contentSelectors: ['article', '.article-content', '.post-content', '.entry-content'],
@@ -23,12 +23,9 @@ export const crawlArticle = async (url: string): Promise<CrawlResult> => {
 
     const result = await client.scrape(url, scrapeOptions);
     
-    return {
-      content: result.content || '',
-      images: result.images || []
-    };
+    return result.content || null;
   } catch (error) {
     console.error('Error crawling article:', error);
-    throw error;
+    return null;
   }
-}
+};
