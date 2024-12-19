@@ -2,23 +2,46 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { format } from "date-fns";
-import { RefreshCw, Rss, CheckCircle, AlertCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react";
+import { Input } from "@/components/ui/input";
+import { format, formatDistanceToNow } from "date-fns";
+import { RefreshCw, Rss, CheckCircle, XCircle, ThumbsUp, ThumbsDown, Clock } from "lucide-react";
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { KeywordManager } from "@/components/KeywordManager";
 import { ArticlePreview } from "@/components/ArticlePreview";
 import { processArticle } from "@/services/articleService";
+import { useScheduleStore } from "@/services/rssService";
 import { toast } from "sonner";
+import { useEffect, useState } from "react";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
+  const { interval, setInterval, lastFetch } = useScheduleStore();
+  const [inputInterval, setInputInterval] = useState(interval.toString());
+  
+  useEffect(() => {
+    const timer = setInterval(() => {
+      refresh();
+    }, interval * 60 * 1000); // Convert minutes to milliseconds
+
+    return () => clearInterval(timer);
+  }, [interval, refresh]);
+
+  const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setInputInterval(value);
+    const numValue = parseInt(value);
+    if (!isNaN(numValue) && numValue > 0) {
+      setInterval(numValue);
+      toast.success(`Refresh interval updated to ${numValue} minutes`);
+    }
+  };
 
   const handleArticleAction = async (articleId: string, action: 'approve' | 'reject') => {
     const article = articles.find(a => a.id === articleId);
     if (!article) return;
 
     try {
-      const updatedArticle = await processArticle({
+      await processArticle({
         ...article,
         status: action === 'approve' ? 'published' : 'rejected'
       });
@@ -42,10 +65,24 @@ export const Dashboard = () => {
     <div className="p-6 space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">News Aggregation Dashboard</h1>
-        <Button onClick={() => refresh()} disabled={isRefreshing} className="gap-2">
-          <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
-          Refresh Feeds
-        </Button>
+        <div className="flex items-center gap-4">
+          <div className="flex items-center gap-2">
+            <Clock className="h-4 w-4" />
+            <Input
+              type="number"
+              min="1"
+              value={inputInterval}
+              onChange={handleIntervalChange}
+              className="w-20"
+              title="Refresh interval in minutes"
+            />
+            <span className="text-sm text-muted-foreground">minutes</span>
+          </div>
+          <Button onClick={() => refresh()} disabled={isRefreshing} className="gap-2">
+            <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
+            Refresh Feeds
+          </Button>
+        </div>
       </div>
 
       <Card>
@@ -83,6 +120,11 @@ export const Dashboard = () => {
                   </div>
                 </div>
               ))}
+              {lastFetch && (
+                <div className="text-sm text-muted-foreground mt-4">
+                  Last fetch: {formatDistanceToNow(lastFetch)} ago
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>

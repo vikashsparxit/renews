@@ -1,6 +1,7 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { useKeywordStore } from './keywordService';
+import { create } from 'zustand';
 
 export interface RSSFeed {
   name: string;
@@ -18,6 +19,20 @@ export interface Article {
   status: 'pending' | 'published' | 'rejected';
   url: string;
 }
+
+interface ScheduleStore {
+  interval: number;
+  setInterval: (minutes: number) => void;
+  lastFetch: Date | null;
+  setLastFetch: (date: Date) => void;
+}
+
+export const useScheduleStore = create<ScheduleStore>((set) => ({
+  interval: 10, // Default 10 minutes
+  setInterval: (minutes) => set({ interval: minutes }),
+  lastFetch: null,
+  setLastFetch: (date) => set({ lastFetch: date }),
+}));
 
 const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
@@ -40,6 +55,7 @@ const containsKeyword = (text: string, keywords: Array<{ text: string, active: b
 
 export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   console.log('Fetching RSS feeds...');
+  useScheduleStore.getState().setLastFetch(new Date());
   return RSS_FEEDS.map(feed => ({
     ...feed,
     status: 'active',
