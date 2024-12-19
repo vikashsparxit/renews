@@ -13,7 +13,7 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       throw new Error('Firecrawl API key not found');
     }
 
-    const client = new FirecrawlApp(firecrawlKey);
+    const client = new FirecrawlApp({ apiKey: firecrawlKey });
     
     const scrapeOptions = {
       contentSelectors: ['article', '.article-content', '.post-content', '.entry-content'],
@@ -21,7 +21,10 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       removeSelectors: ['.advertisement', '.social-share', '.comments']
     };
 
-    const result = await client.scrape(url, scrapeOptions);
+    const result = await client.crawlUrl(url, {
+      limit: 1,
+      scrapeOptions
+    });
     
     return result.content || null;
   } catch (error) {
