@@ -1,10 +1,13 @@
 const DB_NAME = 'surinamNewsDB';
-const DB_VERSION = 1;
+const DB_VERSION = 2; // Increment version to handle migration
 const STORE_NAME = 'apiKeys';
 
 interface ApiKeys {
   openai?: string;
   wordpress?: string;
+  firecrawl?: string;
+  wordpressSiteUrl?: string;
+  autoSchedule?: boolean;
 }
 
 const initDB = (): Promise<IDBDatabase> => {
@@ -23,7 +26,7 @@ const initDB = (): Promise<IDBDatabase> => {
     };
 
     request.onupgradeneeded = (event) => {
-      console.log('Creating object store for API keys');
+      console.log('Upgrading IndexedDB schema...');
       const db = (event.target as IDBOpenDBRequest).result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
         db.createObjectStore(STORE_NAME);
@@ -72,4 +75,13 @@ export const getApiKey = async (key: string): Promise<string | null> => {
       reject(request.error);
     };
   });
+};
+
+export const saveAutoSchedule = async (enabled: boolean): Promise<void> => {
+  return saveApiKey('autoSchedule', enabled.toString());
+};
+
+export const getAutoSchedule = async (): Promise<boolean> => {
+  const value = await getApiKey('autoSchedule');
+  return value === 'true';
 };

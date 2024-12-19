@@ -11,6 +11,7 @@ import { formatDistanceToNow } from "date-fns";
 import { DashboardHeader } from "./dashboard/DashboardHeader";
 import { ArticleList } from "./dashboard/ArticleList";
 import { ScheduledArticleList } from "./dashboard/ScheduledArticleList";
+import { getApiKey } from "@/services/storageService";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
@@ -41,6 +42,33 @@ export const Dashboard = () => {
 
   const handleHoldArticle = async (articleId: string) => {
     toast.success('Article held from publishing');
+  };
+
+  const handlePublishArticle = async (articleId: string) => {
+    try {
+      // Check WordPress configuration
+      const wpKey = await getApiKey('wordpress');
+      const wpUrl = await getApiKey('wordpressSiteUrl');
+      
+      if (!wpKey || !wpUrl) {
+        toast.error('WordPress configuration is required for publishing');
+        return;
+      }
+      
+      const article = articles?.find(a => a.id === articleId);
+      if (!article) return;
+      
+      await publishToWordPress({
+        title: article.title,
+        content: article.rewrittenContent || article.content,
+        status: 'publish'
+      });
+      
+      toast.success('Article published successfully');
+    } catch (error) {
+      console.error('Error publishing article:', error);
+      toast.error('Failed to publish article');
+    }
   };
 
   if (isLoading) {
@@ -140,6 +168,7 @@ export const Dashboard = () => {
               <ScheduledArticleList 
                 articles={scheduledArticles}
                 onHoldArticle={handleHoldArticle}
+                onPublishArticle={handlePublishArticle}
               />
             )}
           </CardContent>
