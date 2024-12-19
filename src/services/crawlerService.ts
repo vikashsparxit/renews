@@ -3,6 +3,16 @@ import { getApiKey } from './storageService';
 
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
+type CrawlFormat = 
+  | "html" 
+  | "markdown" 
+  | "rawHtml" 
+  | "content" 
+  | "links" 
+  | "screenshot" 
+  | "screenshot@fullPage" 
+  | "extract";
+
 interface FirecrawlDocument {
   html?: string;
   markdown?: string;
@@ -56,7 +66,7 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
           '.ad',
           '.widget'
         ],
-        formats: ["html", "markdown"],
+        formats: ["html", "markdown"] as CrawlFormat[],
         waitForSelector: 'article, .article-content, .post-content',
         includeImages: true,
         followLinks: false,
