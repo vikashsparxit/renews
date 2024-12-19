@@ -2,7 +2,6 @@ import axios from 'axios';
 import { Article } from './rssService';
 import { toast } from "sonner";
 
-const OPENAI_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const WP_API_ENDPOINT = 'https://www.surinamnews.com/wp-json/wp/v2';
 
 export const processArticle = async (article: Article): Promise<Article> => {
@@ -37,21 +36,23 @@ export const processArticle = async (article: Article): Promise<Article> => {
 
 const rewriteArticle = async (content: string): Promise<string> => {
   try {
+    console.log('Starting article rewrite with OpenAI');
     const response = await axios.post(
-      OPENAI_API_ENDPOINT,
+      'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: 'You are a professional news editor. Rewrite the following article to avoid plagiarism while maintaining the original meaning, tone, and structure. Do not add or remove information.'
+            content: 'You are a professional news editor. Rewrite the following article to avoid plagiarism while maintaining the original meaning, tone, and structure. Do not add or remove information. Write in a clear, professional journalistic style appropriate for a news website.'
           },
           {
             role: 'user',
             content
           }
         ],
-        temperature: 0.7
+        temperature: 0.7,
+        max_tokens: 1500
       },
       {
         headers: {
@@ -62,10 +63,19 @@ const rewriteArticle = async (content: string): Promise<string> => {
     );
 
     console.log('OpenAI API response received');
+    if (!response.data.choices?.[0]?.message?.content) {
+      throw new Error('Invalid response from OpenAI');
+    }
+    
     return response.data.choices[0].message.content;
   } catch (error) {
     console.error('Error rewriting article:', error);
-    throw new Error('Failed to rewrite article');
+    if (axios.isAxiosError(error) && error.response?.status === 401) {
+      toast.error('Invalid OpenAI API key. Please check your API key in the settings.');
+    } else {
+      toast.error('Failed to rewrite article. Please try again later.');
+    }
+    throw error;
   }
 };
 
