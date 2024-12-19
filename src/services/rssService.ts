@@ -26,6 +26,7 @@ export interface Article {
   url: string;
   scheduledTime?: Date;
   rewrittenContent?: string;
+  isNew?: boolean;
 }
 
 interface ScheduleStore {
@@ -84,7 +85,11 @@ export const fetchArticles = async (): Promise<Article[]> => {
   const articles: Article[] = [];
   const keywords = useKeywordStore.getState().keywords;
   let scheduledTime = new Date();
-  scheduledTime = addMinutes(scheduledTime, 30); // Start scheduling 30 minutes from now
+  scheduledTime = addMinutes(scheduledTime, 30);
+
+  // Get previously fetched article IDs from localStorage
+  const previousArticleIds = JSON.parse(localStorage.getItem('fetchedArticleIds') || '[]');
+  const newArticleIds: string[] = [];
 
   for (const feed of RSS_FEEDS) {
     try {
@@ -97,15 +102,20 @@ export const fetchArticles = async (): Promise<Article[]> => {
       console.log(`Parsing ${items.length} items from ${feed.name}`);
 
       const feedArticles = items
-        .map((item: any) => ({
-          id: item.guid || item.link,
-          title: item.title,
-          content: item.description || '',
-          source: feed.name,
-          timestamp: new Date(item.pubDate),
-          status: 'pending' as const,
-          url: item.link
-        }))
+        .map((item: any) => {
+          const articleId = item.guid || item.link;
+          const isNew = !previousArticleIds.includes(articleId);
+          return {
+            id: articleId,
+            title: item.title,
+            content: item.description || '',
+            source: feed.name,
+            timestamp: new Date(item.pubDate),
+            status: 'pending' as const,
+            url: item.link,
+            isNew
+          };
+        })
         .filter((article: Article) => 
           isWithinLast48Hours(article.timestamp) && 
           (containsKeyword(article.title, keywords) || 
@@ -121,14 +131,15 @@ export const fetchArticles = async (): Promise<Article[]> => {
           // Add scheduling information
           processedArticle.status = 'scheduled';
           processedArticle.scheduledTime = new Date(scheduledTime);
-          scheduledTime = addMinutes(scheduledTime, 30); // Schedule next article 30 minutes later
+          scheduledTime = addMinutes(scheduledTime, 30);
           
           articles.push(processedArticle);
+          newArticleIds.push(article.id);
           toast.success(`Article processed and scheduled: ${article.title}`);
         } catch (error) {
           console.error(`Error processing article: ${article.title}`, error);
           toast.error(`Failed to process article: ${article.title}`);
-          articles.push(article); // Keep the original article in pending state
+          articles.push(article);
         }
       }
 
@@ -138,6 +149,9 @@ export const fetchArticles = async (): Promise<Article[]> => {
       toast.error(`Failed to fetch articles from ${feed.name}`);
     }
   }
+
+  // Update localStorage with new article IDs
+  localStorage.setItem('fetchedArticleIds', JSON.stringify([...newArticleIds]));
 
   // Sort articles by timestamp, newest first
   return articles.sort((a, b) => b.timestamp.getTime() - a.timestamp.getTime());

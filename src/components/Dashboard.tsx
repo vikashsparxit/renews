@@ -4,7 +4,7 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { format, formatDistanceToNow } from "date-fns";
-import { RefreshCw, Rss, Key, ExternalLink, PauseCircle, Clock, AlertCircle } from "lucide-react";
+import { RefreshCw, Rss, Key, ExternalLink, PauseCircle, Clock, AlertCircle, Sparkles } from "lucide-react";
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { KeywordManager } from "@/components/KeywordManager";
 import { ArticlePreview } from "@/components/ArticlePreview";
@@ -153,7 +153,15 @@ export const Dashboard = () => {
                   <div key={article.id}>
                     <div className="flex items-center justify-between">
                       <div className="space-y-1">
-                        <h3 className="font-medium">{article.title}</h3>
+                        <div className="flex items-center gap-2">
+                          <h3 className="font-medium">{article.title}</h3>
+                          {article.isNew && (
+                            <Badge variant="secondary" className="gap-1">
+                              <Sparkles className="h-3 w-3" />
+                              New
+                            </Badge>
+                          )}
+                        </div>
                         <div className="flex items-center gap-2 text-sm text-muted-foreground">
                           <span>{article.source}</span>
                           <span>•</span>
