@@ -11,20 +11,24 @@ import { ArticlePreview } from "@/components/ArticlePreview";
 import { processArticle } from "@/services/articleService";
 import { useScheduleStore } from "@/services/rssService";
 import { toast } from "sonner";
-import { useEffect, useState } from "react";
+import { useEffect, useState, useCallback } from "react";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
   const { interval, setInterval, lastFetch } = useScheduleStore();
   const [inputInterval, setInputInterval] = useState(interval.toString());
   
+  const refreshFeeds = useCallback(() => {
+    refresh();
+  }, [refresh]);
+
   useEffect(() => {
-    const timer = setInterval(() => {
-      refresh();
+    const timerId = window.setInterval(() => {
+      refreshFeeds();
     }, interval * 60 * 1000); // Convert minutes to milliseconds
 
-    return () => clearInterval(timer);
-  }, [interval, refresh]);
+    return () => window.clearInterval(timerId);
+  }, [interval, refreshFeeds]);
 
   const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -78,7 +82,7 @@ export const Dashboard = () => {
             />
             <span className="text-sm text-muted-foreground">minutes</span>
           </div>
-          <Button onClick={() => refresh()} disabled={isRefreshing} className="gap-2">
+          <Button onClick={refreshFeeds} disabled={isRefreshing} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh Feeds
           </Button>
