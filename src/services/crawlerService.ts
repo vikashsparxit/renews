@@ -1,20 +1,7 @@
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { getApiKey } from './storageService';
 
-interface CrawlResult {
-  content: string;
-  images: string[];
-}
-
-type CrawlFormat = 
-  | "html" 
-  | "markdown" 
-  | "rawHtml" 
-  | "content" 
-  | "links" 
-  | "screenshot" 
-  | "screenshot@fullPage" 
-  | "extract";
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
 interface FirecrawlDocument {
   html?: string;
@@ -69,7 +56,7 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
           '.ad',
           '.widget'
         ],
-        formats: ["html", "markdown"] as CrawlFormat[],
+        formats: ["html", "markdown"],
         waitForSelector: 'article, .article-content, .post-content',
         includeImages: true,
         followLinks: false,
@@ -100,9 +87,12 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       }
     }
 
-    // Fallback to fetch
-    console.log('Falling back to direct fetch for URL:', url);
-    const response = await fetch(url);
+    // Fallback to fetch with CORS proxy
+    console.log('Falling back to CORS proxy fetch for URL:', url);
+    const response = await fetch(`${CORS_PROXY}${encodeURIComponent(url)}`);
+    if (!response.ok) {
+      throw new Error(`HTTP error! status: ${response.status}`);
+    }
     const html = await response.text();
     
     // Basic HTML parsing to extract content
