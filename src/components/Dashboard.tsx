@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { RefreshCw, Rss, CheckCircle, AlertCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { KeywordManager } from "@/components/KeywordManager";
+import { ArticlePreview } from "@/components/ArticlePreview";
 import { processArticle } from "@/services/articleService";
 import { toast } from "sonner";
 
@@ -104,6 +105,7 @@ export const Dashboard = () => {
                       </div>
                     </div>
                     <div className="flex items-center gap-2">
+                      <ArticlePreview article={article} />
                       {article.status === "pending" && (
                         <>
                           <Button
