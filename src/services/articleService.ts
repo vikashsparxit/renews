@@ -21,16 +21,15 @@ export const processArticle = async (article: Article): Promise<Article> => {
         status: 'publish'
       });
       console.log('Article published to WordPress successfully');
-      toast.success('Article published successfully');
     }
 
     return {
       ...article,
-      content: rewrittenContent
+      content: rewrittenContent,
+      status: 'published'
     };
   } catch (error) {
     console.error('Error processing article:', error);
-    toast.error('Failed to process article');
     throw error;
   }
 };

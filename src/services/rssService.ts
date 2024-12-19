@@ -3,6 +3,8 @@ import { XMLParser } from 'fast-xml-parser';
 import { useKeywordStore } from './keywordService';
 import { create } from 'zustand';
 import { subHours } from 'date-fns';
+import { processArticle } from './articleService';
+import { toast } from "sonner";
 
 export interface RSSFeed {
   name: string;
@@ -101,10 +103,27 @@ export const fetchArticles = async (): Promise<Article[]> => {
           containsKeyword(article.content, keywords))
         );
 
-      articles.push(...feedArticles);
-      console.log(`Successfully parsed ${feedArticles.length} matching articles from ${feed.name}`);
+      // Process each matching article automatically
+      for (const article of feedArticles) {
+        try {
+          console.log(`Processing article: ${article.title}`);
+          const processedArticle = await processArticle({
+            ...article,
+            status: 'published'  // Auto-approve articles that match keywords
+          });
+          articles.push(processedArticle);
+          toast.success(`Article processed and published: ${article.title}`);
+        } catch (error) {
+          console.error(`Error processing article: ${article.title}`, error);
+          toast.error(`Failed to process article: ${article.title}`);
+          articles.push(article); // Keep the original article in pending state
+        }
+      }
+
+      console.log(`Successfully processed ${feedArticles.length} matching articles from ${feed.name}`);
     } catch (error) {
       console.error(`Error fetching ${feed.name}:`, error);
+      toast.error(`Failed to fetch articles from ${feed.name}`);
     }
   }
 
