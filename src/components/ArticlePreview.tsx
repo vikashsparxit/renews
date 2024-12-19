@@ -11,6 +11,8 @@ import { Eye } from "lucide-react";
 import { Article } from '@/services/rssService';
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { format } from 'date-fns';
+import { ResizablePanelGroup, ResizablePanel, ResizableHandle } from "@/components/ui/resizable";
+import parse from 'html-react-parser';
 
 interface ArticlePreviewProps {
   article: Article;
@@ -24,38 +26,48 @@ export const ArticlePreview = ({ article }: ArticlePreviewProps) => {
           <Eye className="h-4 w-4 text-blue-500" />
         </Button>
       </DialogTrigger>
-      <DialogContent className="max-w-3xl max-h-[80vh]">
+      <DialogContent className="max-w-[90vw] max-h-[90vh]">
         <DialogHeader>
           <DialogTitle>{article.title}</DialogTitle>
-        </DialogHeader>
-        <ScrollArea className="h-[60vh] mt-4">
-          <div className="space-y-4">
-            <div className="text-sm text-muted-foreground">
-              Source: {article.source}
-            </div>
+          <div className="text-sm text-muted-foreground">
+            Source: {article.source} | 
             {article.scheduledTime && article.status === 'scheduled' && (
-              <div className="text-sm text-success">
+              <span className="text-success ml-2">
                 Scheduled to post at: {format(article.scheduledTime, 'PPpp')}
-              </div>
-            )}
-            {article.rewrittenContent ? (
-              <>
-                <div className="prose prose-sm dark:prose-invert">
-                  <h3 className="text-primary">Rewritten Content:</h3>
-                  <div dangerouslySetInnerHTML={{ __html: article.rewrittenContent }} />
-                </div>
-                <div className="mt-4 pt-4 border-t">
-                  <h3 className="text-muted-foreground mb-2">Original Content:</h3>
-                  <div className="prose prose-sm dark:prose-invert opacity-70" dangerouslySetInnerHTML={{ __html: article.content }} />
-                </div>
-              </>
-            ) : (
-              <div className="prose prose-sm dark:prose-invert">
-                <div dangerouslySetInnerHTML={{ __html: article.content }} />
-              </div>
+              </span>
             )}
           </div>
-        </ScrollArea>
+        </DialogHeader>
+        
+        <ResizablePanelGroup direction="horizontal" className="h-[70vh] mt-4">
+          <ResizablePanel defaultSize={50}>
+            <div className="h-full p-4 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Original Content</h3>
+              <ScrollArea className="h-[calc(100%-2rem)]">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  {parse(article.content)}
+                </div>
+              </ScrollArea>
+            </div>
+          </ResizablePanel>
+          
+          <ResizableHandle withHandle />
+          
+          <ResizablePanel defaultSize={50}>
+            <div className="h-full p-4 border rounded-lg">
+              <h3 className="text-lg font-semibold mb-4">Rewritten Content</h3>
+              <ScrollArea className="h-[calc(100%-2rem)]">
+                <div className="prose prose-sm dark:prose-invert max-w-none">
+                  {article.rewrittenContent ? (
+                    parse(article.rewrittenContent)
+                  ) : (
+                    <p className="text-muted-foreground">Content is being processed...</p>
+                  )}
+                </div>
+              </ScrollArea>
+            </div>
+          </ResizablePanel>
+        </ResizablePanelGroup>
       </DialogContent>
     </Dialog>
   );

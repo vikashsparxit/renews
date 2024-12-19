@@ -2,6 +2,7 @@ import axios from 'axios';
 import { Article } from './rssService';
 import { toast } from "sonner";
 import { getApiKey } from './storageService';
+import FirecrawlApp from '@mendable/firecrawl-js';
 
 const WP_API_ENDPOINT = 'https://www.surinamnews.com/wp-json/wp/v2';
 
@@ -9,18 +10,53 @@ export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);
   
   try {
+    // First, crawl the full content from the URL
+    const fullContent = await crawlArticleContent(article.url);
+    if (fullContent) {
+      article.content = fullContent;
+    }
+    
+    // Then rewrite the content
     const rewrittenContent = await rewriteArticle(article.content);
     console.log('Article rewritten successfully');
     
     return {
       ...article,
       rewrittenContent,
-      content: article.content,
       status: 'scheduled'
     };
   } catch (error) {
     console.error('Error processing article:', error);
     throw error;
+  }
+};
+
+const crawlArticleContent = async (url: string): Promise<string | null> => {
+  try {
+    console.log('Crawling full content from:', url);
+    const apiKey = await getApiKey('firecrawl');
+    
+    if (!apiKey) {
+      console.log('Firecrawl API key not found, using RSS content');
+      return null;
+    }
+
+    const firecrawl = new FirecrawlApp({ apiKey });
+    const result = await firecrawl.crawlUrl(url, {
+      limit: 1,
+      scrapeOptions: {
+        formats: ['html'],
+      }
+    });
+
+    if (result.success && result.data?.[0]?.content) {
+      return result.data[0].content;
+    }
+    
+    return null;
+  } catch (error) {
+    console.error('Error crawling article content:', error);
+    return null;
   }
 };
 
@@ -37,11 +73,14 @@ const rewriteArticle = async (content: string): Promise<string> => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o-mini',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
-            content: 'You are a professional news editor. Rewrite the following article to avoid plagiarism while maintaining the original meaning, tone, and structure. Do not add or remove information. Write in a clear, professional journalistic style appropriate for a news website.'
+            content: `You are tasked with rephrasing content to make it plagiarism-free while strictly maintaining the original tone, structure, and meaning. Your goal is to rewrite the text so that:
+1. The structure of the original sentences is preserved.
+2. No additional information is added, and no existing details are removed.
+3. The rewritten content uses different words and phrases while retaining the same style and tone.`
           },
           {
             role: 'user',
