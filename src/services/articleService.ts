@@ -1,27 +1,17 @@
-import { Article } from './rssService';
-import { useKeywordStore } from './keywordService';
 import axios from 'axios';
+import { Article } from './rssService';
 import { toast } from "sonner";
 
 const OPENAI_API_ENDPOINT = 'https://api.openai.com/v1/chat/completions';
 const WP_API_ENDPOINT = 'https://www.surinamnews.com/wp-json/wp/v2';
 
 export const processArticle = async (article: Article): Promise<Article> => {
-  // Check if article matches any active keywords
-  const activeKeywords = useKeywordStore.getState().keywords.filter(k => k.active);
-  const matchesKeywords = activeKeywords.some(keyword => 
-    article.title.toLowerCase().includes(keyword.text.toLowerCase()) ||
-    article.content.toLowerCase().includes(keyword.text.toLowerCase())
-  );
-
-  if (!matchesKeywords) {
-    console.log('Article does not match any active keywords:', article.title);
-    return { ...article, status: 'rejected' };
-  }
-
+  console.log('Processing article:', article.title);
+  
   try {
     // Rewrite article using OpenAI
     const rewrittenContent = await rewriteArticle(article.content);
+    console.log('Article rewritten successfully');
     
     // If approved, publish to WordPress
     if (article.status === 'published') {
@@ -30,6 +20,7 @@ export const processArticle = async (article: Article): Promise<Article> => {
         content: rewrittenContent,
         status: 'publish'
       });
+      console.log('Article published to WordPress successfully');
       toast.success('Article published successfully');
     }
 
@@ -40,7 +31,7 @@ export const processArticle = async (article: Article): Promise<Article> => {
   } catch (error) {
     console.error('Error processing article:', error);
     toast.error('Failed to process article');
-    return article;
+    throw error;
   }
 };
 
@@ -70,6 +61,7 @@ const rewriteArticle = async (content: string): Promise<string> => {
       }
     );
 
+    console.log('OpenAI API response received');
     return response.data.choices[0].message.content;
   } catch (error) {
     console.error('Error rewriting article:', error);
@@ -93,6 +85,7 @@ const publishToWordPress = async (article: {
         }
       }
     );
+    console.log('Article published to WordPress');
   } catch (error) {
     console.error('Error publishing to WordPress:', error);
     throw new Error('Failed to publish to WordPress');
