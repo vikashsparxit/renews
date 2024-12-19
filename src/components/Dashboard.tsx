@@ -4,12 +4,11 @@ import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Input } from "@/components/ui/input";
 import { format, formatDistanceToNow } from "date-fns";
-import { RefreshCw, Rss, CheckCircle, XCircle, ThumbsUp, ThumbsDown, Clock } from "lucide-react";
+import { RefreshCw, Rss, Key, ExternalLink, PauseCircle, Clock } from "lucide-react";
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { KeywordManager } from "@/components/KeywordManager";
 import { ArticlePreview } from "@/components/ArticlePreview";
 import { Settings } from "@/components/Settings";
-import { processArticle } from "@/services/articleService";
 import { useScheduleStore } from "@/services/rssService";
 import { toast } from "sonner";
 import { useEffect, useState, useCallback } from "react";
@@ -26,7 +25,7 @@ export const Dashboard = () => {
   useEffect(() => {
     const timerId = window.setInterval(() => {
       refreshFeeds();
-    }, interval * 60 * 1000); // Convert minutes to milliseconds
+    }, interval * 60 * 1000);
 
     return () => window.clearInterval(timerId);
   }, [interval, refreshFeeds]);
@@ -41,21 +40,9 @@ export const Dashboard = () => {
     }
   };
 
-  const handleArticleAction = async (articleId: string, action: 'approve' | 'reject') => {
-    const article = articles.find(a => a.id === articleId);
-    if (!article) return;
-
-    try {
-      await processArticle({
-        ...article,
-        status: action === 'approve' ? 'published' : 'rejected'
-      });
-      
-      toast.success(`Article ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
-      refresh();
-    } catch (error) {
-      toast.error(`Failed to ${action} article`);
-    }
+  const handleHoldArticle = async (articleId: string) => {
+    // Implementation for holding/pausing scheduled articles
+    toast.success('Article held from publishing');
   };
 
   if (isLoading) {
@@ -83,24 +70,26 @@ export const Dashboard = () => {
             />
             <span className="text-sm text-muted-foreground">minutes</span>
           </div>
-          <Settings />
           <Button onClick={refreshFeeds} disabled={isRefreshing} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh Feeds
           </Button>
+          <Settings>
+            <Key className="h-4 w-4" />
+          </Settings>
         </div>
       </div>
 
-      <Card>
-        <CardHeader>
-          <CardTitle>Keyword Management</CardTitle>
-        </CardHeader>
-        <CardContent>
-          <KeywordManager />
-        </CardContent>
-      </Card>
-
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Keyword Management</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <KeywordManager />
+          </CardContent>
+        </Card>
+
         <Card>
           <CardHeader>
             <CardTitle className="flex items-center gap-2">
@@ -134,14 +123,16 @@ export const Dashboard = () => {
             </div>
           </CardContent>
         </Card>
+      </div>
 
+      <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
           <CardHeader>
             <CardTitle>Recent Articles</CardTitle>
           </CardHeader>
           <CardContent>
             <div className="space-y-4">
-              {articles?.map((article, index) => (
+              {articles?.filter(a => a.rewrittenContent).map((article) => (
                 <div key={article.id}>
                   <div className="flex items-center justify-between">
                     <div className="space-y-1">
@@ -154,35 +145,61 @@ export const Dashboard = () => {
                     </div>
                     <div className="flex items-center gap-2">
                       <ArticlePreview article={article} />
-                      {article.status === "pending" && (
-                        <>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleArticleAction(article.id, 'approve')}
-                            title="Approve"
-                          >
-                            <ThumbsUp className="h-4 w-4 text-green-500" />
-                          </Button>
-                          <Button
-                            variant="ghost"
-                            size="icon"
-                            onClick={() => handleArticleAction(article.id, 'reject')}
-                            title="Reject"
-                          >
-                            <ThumbsDown className="h-4 w-4 text-red-500" />
-                          </Button>
-                        </>
-                      )}
-                      {article.status === "published" && (
-                        <CheckCircle className="h-5 w-5 text-green-500" />
-                      )}
-                      {article.status === "rejected" && (
-                        <XCircle className="h-5 w-5 text-destructive" />
-                      )}
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => window.open(article.url, '_blank')}
+                        title="Open original article"
+                      >
+                        <ExternalLink className="h-4 w-4 text-blue-500" />
+                      </Button>
                     </div>
                   </div>
-                  {index < articles.length - 1 && <Separator className="my-4" />}
+                  {articles.indexOf(article) < articles.length - 1 && <Separator className="my-4" />}
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Scheduled Posts</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              {articles?.filter(a => a.status === 'scheduled' && a.scheduledTime).map((article) => (
+                <div key={article.id}>
+                  <div className="flex items-center justify-between">
+                    <div className="space-y-1">
+                      <h3 className="font-medium">{article.title}</h3>
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <span>Scheduled: {format(new Date(article.scheduledTime!), "HH:mm")}</span>
+                        <span>•</span>
+                        <span>{article.source}</span>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <ArticlePreview article={article} />
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => window.open(article.url, '_blank')}
+                        title="Open original article"
+                      >
+                        <ExternalLink className="h-4 w-4 text-blue-500" />
+                      </Button>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => handleHoldArticle(article.id)}
+                        title="Hold publication"
+                      >
+                        <PauseCircle className="h-4 w-4 text-yellow-500" />
+                      </Button>
+                    </div>
+                  </div>
+                  {articles.indexOf(article) < articles.length - 1 && <Separator className="my-4" />}
                 </div>
               ))}
             </div>

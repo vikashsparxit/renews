@@ -9,14 +9,13 @@ export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);
   
   try {
-    // Rewrite article using OpenAI
     const rewrittenContent = await rewriteArticle(article.content);
     console.log('Article rewritten successfully');
     
     return {
       ...article,
       rewrittenContent,
-      content: article.content, // Keep original content
+      content: article.content,
       status: 'scheduled'
     };
   } catch (error) {
@@ -38,7 +37,7 @@ const rewriteArticle = async (content: string): Promise<string> => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o',
+        model: 'gpt-4o-mini',
         messages: [
           {
             role: 'system',
@@ -60,7 +59,6 @@ const rewriteArticle = async (content: string): Promise<string> => {
       }
     );
 
-    console.log('OpenAI API response received');
     if (!response.data.choices?.[0]?.message?.content) {
       throw new Error('Invalid response from OpenAI');
     }
