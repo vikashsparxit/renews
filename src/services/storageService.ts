@@ -1,5 +1,5 @@
 const DB_NAME = 'surinamNewsDB';
-const DB_VERSION = 2; // Increment version to handle migration
+const DB_VERSION = 2;
 const STORE_NAME = 'apiKeys';
 
 interface ApiKeys {
@@ -25,56 +25,79 @@ const initDB = (): Promise<IDBDatabase> => {
       resolve(request.result);
     };
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
       console.log('Upgrading IndexedDB schema...');
       const db = (event.target as IDBOpenDBRequest).result;
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
+      
+      // Delete the old store if it exists
+      if (db.objectStoreNames.contains(STORE_NAME)) {
+        db.deleteObjectStore(STORE_NAME);
       }
+      
+      // Create a new store
+      db.createObjectStore(STORE_NAME);
     };
   });
 };
 
 export const saveApiKey = async (key: string, value: string): Promise<void> => {
   console.log(`Saving ${key} to IndexedDB...`);
-  const db = await initDB();
-  
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.put(value, key);
+  try {
+    const db = await initDB();
+    
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.put(value, key);
 
-    request.onsuccess = () => {
-      console.log(`${key} saved successfully`);
-      resolve();
-    };
+      request.onsuccess = () => {
+        console.log(`${key} saved successfully`);
+        resolve();
+      };
 
-    request.onerror = () => {
-      console.error(`Error saving ${key}:`, request.error);
-      reject(request.error);
-    };
-  });
+      request.onerror = () => {
+        console.error(`Error saving ${key}:`, request.error);
+        reject(request.error);
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Error in saveApiKey:', error);
+    throw error;
+  }
 };
 
 export const getApiKey = async (key: string): Promise<string | null> => {
   console.log(`Retrieving ${key} from IndexedDB...`);
-  const db = await initDB();
+  try {
+    const db = await initDB();
 
-  return new Promise((resolve, reject) => {
-    const transaction = db.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(key);
+    return new Promise((resolve, reject) => {
+      const transaction = db.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(key);
 
-    request.onsuccess = () => {
-      console.log(`${key} retrieved successfully`);
-      resolve(request.result || null);
-    };
+      request.onsuccess = () => {
+        console.log(`${key} retrieved successfully`);
+        resolve(request.result || null);
+      };
 
-    request.onerror = () => {
-      console.error(`Error retrieving ${key}:`, request.error);
-      reject(request.error);
-    };
-  });
+      request.onerror = () => {
+        console.error(`Error retrieving ${key}:`, request.error);
+        reject(request.error);
+      };
+
+      transaction.oncomplete = () => {
+        db.close();
+      };
+    });
+  } catch (error) {
+    console.error('Error in getApiKey:', error);
+    throw error;
+  }
 };
 
 export const saveAutoSchedule = async (enabled: boolean): Promise<void> => {
