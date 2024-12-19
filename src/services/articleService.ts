@@ -13,20 +13,11 @@ export const processArticle = async (article: Article): Promise<Article> => {
     const rewrittenContent = await rewriteArticle(article.content);
     console.log('Article rewritten successfully');
     
-    // If approved, publish to WordPress
-    if (article.status === 'published') {
-      await publishToWordPress({
-        title: article.title,
-        content: rewrittenContent,
-        status: 'publish'
-      });
-      console.log('Article published to WordPress successfully');
-    }
-
     return {
       ...article,
-      content: rewrittenContent,
-      status: 'published'
+      rewrittenContent,
+      content: article.content, // Keep original content
+      status: 'scheduled'
     };
   } catch (error) {
     console.error('Error processing article:', error);
@@ -86,7 +77,7 @@ const rewriteArticle = async (content: string): Promise<string> => {
   }
 };
 
-const publishToWordPress = async (article: { 
+export const publishToWordPress = async (article: { 
   title: string; 
   content: string; 
   status: 'publish' | 'draft' 

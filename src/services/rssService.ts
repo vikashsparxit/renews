@@ -2,7 +2,7 @@ import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
 import { useKeywordStore } from './keywordService';
 import { create } from 'zustand';
-import { subHours } from 'date-fns';
+import { subHours, addMinutes } from 'date-fns';
 import { processArticle } from './articleService';
 import { toast } from "sonner";
 
@@ -19,8 +19,10 @@ export interface Article {
   content: string;
   source: string;
   timestamp: Date;
-  status: 'pending' | 'published' | 'rejected';
+  status: 'pending' | 'published' | 'rejected' | 'scheduled';
   url: string;
+  scheduledTime?: Date;
+  rewrittenContent?: string;
 }
 
 interface ScheduleStore {
@@ -36,8 +38,6 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
   lastFetch: null,
   setLastFetch: (date) => set({ lastFetch: date }),
 }));
-
-const CORS_PROXY = 'https://cors-anywhere.herokuapp.com/';
 
 const RSS_FEEDS = [
   {
@@ -76,6 +76,8 @@ export const fetchArticles = async (): Promise<Article[]> => {
   const parser = new XMLParser();
   const articles: Article[] = [];
   const keywords = useKeywordStore.getState().keywords;
+  let scheduledTime = new Date();
+  scheduledTime = addMinutes(scheduledTime, 30); // Start scheduling 30 minutes from now
 
   for (const feed of RSS_FEEDS) {
     try {
@@ -107,12 +109,15 @@ export const fetchArticles = async (): Promise<Article[]> => {
       for (const article of feedArticles) {
         try {
           console.log(`Processing article: ${article.title}`);
-          const processedArticle = await processArticle({
-            ...article,
-            status: 'published'  // Auto-approve articles that match keywords
-          });
+          const processedArticle = await processArticle(article);
+          
+          // Add scheduling information
+          processedArticle.status = 'scheduled';
+          processedArticle.scheduledTime = new Date(scheduledTime);
+          scheduledTime = addMinutes(scheduledTime, 30); // Schedule next article 30 minutes later
+          
           articles.push(processedArticle);
-          toast.success(`Article processed and published: ${article.title}`);
+          toast.success(`Article processed and scheduled: ${article.title}`);
         } catch (error) {
           console.error(`Error processing article: ${article.title}`, error);
           toast.error(`Failed to process article: ${article.title}`);

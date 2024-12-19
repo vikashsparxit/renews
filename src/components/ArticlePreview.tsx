@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { Eye } from "lucide-react";
 import { Article } from '@/services/rssService';
 import { ScrollArea } from "@/components/ui/scroll-area";
+import { format } from 'date-fns';
 
 interface ArticlePreviewProps {
   article: Article;
@@ -32,9 +33,27 @@ export const ArticlePreview = ({ article }: ArticlePreviewProps) => {
             <div className="text-sm text-muted-foreground">
               Source: {article.source}
             </div>
-            <div className="prose prose-sm dark:prose-invert">
-              <div dangerouslySetInnerHTML={{ __html: article.content }} />
-            </div>
+            {article.scheduledTime && article.status === 'scheduled' && (
+              <div className="text-sm text-success">
+                Scheduled to post at: {format(article.scheduledTime, 'PPpp')}
+              </div>
+            )}
+            {article.rewrittenContent ? (
+              <>
+                <div className="prose prose-sm dark:prose-invert">
+                  <h3 className="text-primary">Rewritten Content:</h3>
+                  <div dangerouslySetInnerHTML={{ __html: article.rewrittenContent }} />
+                </div>
+                <div className="mt-4 pt-4 border-t">
+                  <h3 className="text-muted-foreground mb-2">Original Content:</h3>
+                  <div className="prose prose-sm dark:prose-invert opacity-70" dangerouslySetInnerHTML={{ __html: article.content }} />
+                </div>
+              </>
+            ) : (
+              <div className="prose prose-sm dark:prose-invert">
+                <div dangerouslySetInnerHTML={{ __html: article.content }} />
+              </div>
+            )}
           </div>
         </ScrollArea>
       </DialogContent>
