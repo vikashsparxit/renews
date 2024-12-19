@@ -74,9 +74,7 @@ export const Dashboard = () => {
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh Feeds
           </Button>
-          <Settings>
-            <Key className="h-4 w-4" />
-          </Settings>
+          <Settings icon={<Key className="h-4 w-4" />} />
         </div>
       </div>
 
