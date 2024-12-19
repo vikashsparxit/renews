@@ -3,11 +3,31 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { format } from "date-fns";
-import { RefreshCw, Rss, CheckCircle, AlertCircle, XCircle } from "lucide-react";
+import { RefreshCw, Rss, CheckCircle, AlertCircle, XCircle, ThumbsUp, ThumbsDown } from "lucide-react";
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
+import { KeywordManager } from "@/components/KeywordManager";
+import { processArticle } from "@/services/articleService";
+import { toast } from "sonner";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
+
+  const handleArticleAction = async (articleId: string, action: 'approve' | 'reject') => {
+    const article = articles.find(a => a.id === articleId);
+    if (!article) return;
+
+    try {
+      const updatedArticle = await processArticle({
+        ...article,
+        status: action === 'approve' ? 'published' : 'rejected'
+      });
+      
+      toast.success(`Article ${action === 'approve' ? 'approved' : 'rejected'} successfully`);
+      refresh();
+    } catch (error) {
+      toast.error(`Failed to ${action} article`);
+    }
+  };
 
   if (isLoading) {
     return (
@@ -26,6 +46,15 @@ export const Dashboard = () => {
           Refresh Feeds
         </Button>
       </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Keyword Management</CardTitle>
+        </CardHeader>
+        <CardContent>
+          <KeywordManager />
+        </CardContent>
+      </Card>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <Card>
@@ -74,13 +103,34 @@ export const Dashboard = () => {
                         <span>{format(new Date(article.timestamp), "HH:mm")}</span>
                       </div>
                     </div>
-                    {article.status === "published" ? (
-                      <CheckCircle className="h-5 w-5 text-success" />
-                    ) : article.status === "rejected" ? (
-                      <XCircle className="h-5 w-5 text-destructive" />
-                    ) : (
-                      <AlertCircle className="h-5 w-5 text-yellow-500 animate-pulse-slow" />
-                    )}
+                    <div className="flex items-center gap-2">
+                      {article.status === "pending" && (
+                        <>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleArticleAction(article.id, 'approve')}
+                            title="Approve"
+                          >
+                            <ThumbsUp className="h-4 w-4 text-green-500" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleArticleAction(article.id, 'reject')}
+                            title="Reject"
+                          >
+                            <ThumbsDown className="h-4 w-4 text-red-500" />
+                          </Button>
+                        </>
+                      )}
+                      {article.status === "published" && (
+                        <CheckCircle className="h-5 w-5 text-green-500" />
+                      )}
+                      {article.status === "rejected" && (
+                        <XCircle className="h-5 w-5 text-destructive" />
+                      )}
+                    </div>
                   </div>
                   {index < articles.length - 1 && <Separator className="my-4" />}
                 </div>
