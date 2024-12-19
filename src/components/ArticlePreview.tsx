@@ -28,13 +28,16 @@ export const ArticlePreview = ({ article }: ArticlePreviewProps) => {
       </DialogTrigger>
       <DialogContent className="max-w-[90vw] max-h-[90vh]">
         <DialogHeader>
-          <DialogTitle>{article.title}</DialogTitle>
-          <div className="text-sm text-muted-foreground">
-            Source: {article.source} | 
+          <DialogTitle className="text-xl">{article.title}</DialogTitle>
+          <div className="text-sm text-muted-foreground flex items-center gap-2">
+            <span>Source: {article.source}</span>
             {article.scheduledTime && article.status === 'scheduled' && (
-              <span className="text-success ml-2">
-                Scheduled to post at: {format(article.scheduledTime, 'PPpp')}
-              </span>
+              <>
+                <span>•</span>
+                <span className="text-success">
+                  Scheduled: {format(article.scheduledTime, 'PPpp')}
+                </span>
+              </>
             )}
           </div>
         </DialogHeader>
@@ -45,7 +48,20 @@ export const ArticlePreview = ({ article }: ArticlePreviewProps) => {
               <h3 className="text-lg font-semibold mb-4">Original Content</h3>
               <ScrollArea className="h-[calc(100%-2rem)]">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
-                  {parse(article.content)}
+                  {parse(article.content, {
+                    replace: (domNode: any) => {
+                      if (domNode.name === 'img') {
+                        return (
+                          <img
+                            src={domNode.attribs.src}
+                            alt={domNode.attribs.alt || ''}
+                            className="max-w-full h-auto rounded-md my-4"
+                            loading="lazy"
+                          />
+                        );
+                      }
+                    }
+                  })}
                 </div>
               </ScrollArea>
             </div>
@@ -59,7 +75,20 @@ export const ArticlePreview = ({ article }: ArticlePreviewProps) => {
               <ScrollArea className="h-[calc(100%-2rem)]">
                 <div className="prose prose-sm dark:prose-invert max-w-none">
                   {article.rewrittenContent ? (
-                    parse(article.rewrittenContent)
+                    parse(article.rewrittenContent, {
+                      replace: (domNode: any) => {
+                        if (domNode.name === 'img') {
+                          return (
+                            <img
+                              src={domNode.attribs.src}
+                              alt={domNode.attribs.alt || ''}
+                              className="max-w-full h-auto rounded-md my-4"
+                              loading="lazy"
+                            />
+                          );
+                        }
+                      }
+                    })
                   ) : (
                     <p className="text-muted-foreground">Content is being processed...</p>
                   )}
