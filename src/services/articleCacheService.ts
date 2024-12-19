@@ -1,3 +1,14 @@
+interface Article {
+  id: string;
+  title: string;
+  content: string;
+  rewrittenContent?: string;
+  source: string;
+  timestamp: Date;
+  url: string;
+  cacheDate: Date;
+}
+
 let db: IDBDatabase | null = null;
 const DB_NAME = 'renews_cache';
 const DB_VERSION = 1;
@@ -19,15 +30,17 @@ export const initDB = (): Promise<void> => {
     };
 
     request.onsuccess = (event) => {
-      db = (event.target as IDBOpenDBRequest).result;
+      const target = event.target as IDBOpenDBRequest;
+      db = target.result;
       console.log('IndexedDB opened successfully');
       resolve();
     };
 
     request.onupgradeneeded = (event) => {
-      const database = (event.target as IDBOpenDBRequest).result;
+      const target = event.target as IDBOpenDBRequest;
+      const database = target.result;
       if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        database.createObjectStore(STORE_NAME, { keyPath: 'url' });
         console.log('Article store created successfully');
       }
     };
@@ -37,8 +50,12 @@ export const initDB = (): Promise<void> => {
 // Call initDB when the module loads
 initDB().catch(console.error);
 
-export const saveArticle = (article: { id: string; title: string; content: string }) => {
-  return new Promise<void>((resolve, reject) => {
+export const saveArticleToCache = async (article: Article): Promise<void> => {
+  if (!db) {
+    await initDB();
+  }
+
+  return new Promise((resolve, reject) => {
     if (!db) {
       reject(new Error('Database not initialized'));
       return;
@@ -49,17 +66,22 @@ export const saveArticle = (article: { id: string; title: string; content: strin
     const request = store.put(article);
 
     request.onsuccess = () => {
+      console.log('Article cached successfully:', article.title);
       resolve();
     };
 
     request.onerror = (event) => {
-      console.error('Error saving article:', event);
-      reject(new Error('Failed to save article'));
+      console.error('Error caching article:', event);
+      reject(new Error('Failed to cache article'));
     };
   });
 };
 
-export const getArticle = (id: string): Promise<{ id: string; title: string; content: string } | undefined> => {
+export const getArticleFromCache = async (url: string): Promise<Article | undefined> => {
+  if (!db) {
+    await initDB();
+  }
+
   return new Promise((resolve, reject) => {
     if (!db) {
       reject(new Error('Database not initialized'));
@@ -68,20 +90,25 @@ export const getArticle = (id: string): Promise<{ id: string; title: string; con
 
     const transaction = db.transaction(STORE_NAME, 'readonly');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(id);
+    const request = store.get(url);
 
     request.onsuccess = (event) => {
-      resolve(event.target.result);
+      const target = event.target as IDBRequest;
+      resolve(target.result);
     };
 
     request.onerror = (event) => {
-      console.error('Error retrieving article:', event);
-      reject(new Error('Failed to retrieve article'));
+      console.error('Error retrieving article from cache:', event);
+      reject(new Error('Failed to retrieve article from cache'));
     };
   });
 };
 
-export const deleteArticle = (id: string): Promise<void> => {
+export const clearExpiredCache = async (): Promise<void> => {
+  if (!db) {
+    await initDB();
+  }
+
   return new Promise((resolve, reject) => {
     if (!db) {
       reject(new Error('Database not initialized'));
@@ -90,15 +117,29 @@ export const deleteArticle = (id: string): Promise<void> => {
 
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
-    const request = store.delete(id);
+    const request = store.openCursor();
+    const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
+    const now = new Date().getTime();
 
-    request.onsuccess = () => {
-      resolve();
+    request.onsuccess = (event) => {
+      const target = event.target as IDBRequest;
+      const cursor = target.result as IDBCursorWithValue;
+      
+      if (cursor) {
+        const article = cursor.value as Article;
+        if (now - new Date(article.cacheDate).getTime() > TWO_DAYS) {
+          cursor.delete();
+        }
+        cursor.continue();
+      } else {
+        console.log('Cache cleanup completed');
+        resolve();
+      }
     };
 
     request.onerror = (event) => {
-      console.error('Error deleting article:', event);
-      reject(new Error('Failed to delete article'));
+      console.error('Error clearing expired cache:', event);
+      reject(new Error('Failed to clear expired cache'));
     };
   });
 };
