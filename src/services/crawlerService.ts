@@ -16,6 +16,13 @@ type CrawlFormat =
   | "screenshot@fullPage" 
   | "extract";
 
+interface FirecrawlDocument {
+  html?: string;
+  markdown?: string;
+  images?: string[];
+  [key: string]: any;
+}
+
 export const crawlWithFallback = async (url: string): Promise<string | null> => {
   try {
     console.log('Starting crawl for URL:', url);
@@ -76,7 +83,7 @@ export const crawlWithFallback = async (url: string): Promise<string | null> => 
       });
 
       if ('data' in result && Array.isArray(result.data) && result.data.length > 0) {
-        const document = result.data[0];
+        const document = result.data[0] as FirecrawlDocument;
         console.log('Successfully crawled content with Firecrawl');
         
         // Process and embed images in the HTML content
