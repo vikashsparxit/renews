@@ -45,6 +45,18 @@ export const Dashboard = () => {
     toast.success('Article held from publishing');
   };
 
+  const handleAddFeed = (url: string) => {
+    // Implementation for adding new RSS feed
+    console.log('Adding new feed:', url);
+    toast.success('RSS feed added successfully');
+  };
+
+  const handleDeleteFeed = (url: string) => {
+    // Implementation for deleting RSS feed
+    console.log('Deleting feed:', url);
+    toast.success('RSS feed deleted successfully');
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center h-screen">
@@ -96,29 +108,16 @@ export const Dashboard = () => {
             </CardTitle>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {feeds?.map((feed) => (
-                <div key={feed.name} className="flex items-center justify-between">
-                  <div>
-                    <h3 className="font-medium">{feed.name}</h3>
-                    <p className="text-sm text-muted-foreground">{feed.url}</p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <Badge variant={feed.status === "active" ? "default" : "destructive"}>
-                      {feed.status}
-                    </Badge>
-                    <span className="text-sm text-muted-foreground">
-                      {format(feed.lastUpdate, "HH:mm:ss")}
-                    </span>
-                  </div>
-                </div>
-              ))}
-              {lastFetch && (
-                <div className="text-sm text-muted-foreground mt-4">
-                  Last fetch: {formatDistanceToNow(lastFetch)} ago
-                </div>
-              )}
-            </div>
+            <RSSFeedManager
+              feeds={feeds}
+              onAddFeed={handleAddFeed}
+              onDeleteFeed={handleDeleteFeed}
+            />
+            {lastFetch && (
+              <div className="text-sm text-muted-foreground mt-4">
+                Last fetch: {formatDistanceToNow(lastFetch)} ago
+              </div>
+            )}
           </CardContent>
         </Card>
       </div>

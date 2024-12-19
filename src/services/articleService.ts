@@ -4,8 +4,6 @@ import { toast } from "sonner";
 import { getApiKey } from './storageService';
 import FirecrawlApp from '@mendable/firecrawl-js';
 
-const WP_API_ENDPOINT = 'https://www.surinamnews.com/wp-json/wp/v2';
-
 export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);
   
@@ -46,17 +44,9 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
-        elements: {
-          content: {
-            selector: 'article, .article, .post-content, .entry-content',
-            type: 'html'
-          },
-          images: {
-            selector: 'img',
-            type: 'attribute',
-            attribute: 'src'
-          }
-        }
+        contentTypes: ['text', 'image'],
+        contentSelector: 'article, .article, .post-content, .entry-content',
+        imageSelector: 'img'
       }
     });
 
@@ -65,8 +55,8 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       let content = '';
       
       // Extract article content
-      if (crawledData.content) {
-        content = crawledData.content;
+      if (crawledData.text) {
+        content = crawledData.text;
       }
       
       // Process and embed images
@@ -101,7 +91,7 @@ const rewriteArticle = async (content: string): Promise<string> => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4',
+        model: 'gpt-4o',
         messages: [
           {
             role: 'system',
