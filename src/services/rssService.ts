@@ -6,6 +6,8 @@ import { subHours, addMinutes } from 'date-fns';
 import { processArticle } from './articleService';
 import { toast } from "sonner";
 
+const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
+
 export interface RSSFeed {
   name: string;
   url: string;
