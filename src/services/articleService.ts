@@ -4,8 +4,8 @@ import { toast } from "sonner";
 import { getApiKey } from './storageService';
 import FirecrawlApp from '@mendable/firecrawl-js';
 import { getArticleFromCache, saveArticleToCache } from './articleCacheService';
-
-const WP_API_ENDPOINT = 'https://surinamnews.com/wp-json/wp/v2';
+import { crawlWithFallback } from './crawlerService';
+import { publishToWordPress } from './wordpressService';
 
 export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);
@@ -27,7 +27,7 @@ export const processArticle = async (article: Article): Promise<Article> => {
     console.log('Article not in cache, processing:', article.title);
     
     // First, crawl the full content
-    const fullContent = await crawlArticleContent(article.url);
+    const fullContent = await crawlWithFallback(article.url);
     if (fullContent) {
       article.content = fullContent;
     }
@@ -59,57 +59,6 @@ export const processArticle = async (article: Article): Promise<Article> => {
   }
 };
 
-const crawlArticleContent = async (url: string): Promise<string | null> => {
-  try {
-    console.log('Crawling full content from:', url);
-    const apiKey = await getApiKey('firecrawl');
-    
-    if (!apiKey) {
-      console.log('Firecrawl API key not found, using RSS content');
-      return null;
-    }
-
-    const firecrawl = new FirecrawlApp({ apiKey });
-    const result = await firecrawl.crawlUrl(url, {
-      limit: 1,
-      scrapeOptions: {
-        formats: ['html'],
-        contentTypes: ['text', 'image'],
-        contentSelectors: {
-          article: 'article, .article, .post-content, .entry-content',
-          images: 'img'
-        }
-      }
-    });
-
-    if (result.success && result.data?.[0]) {
-      const crawledData = result.data[0];
-      let content = '';
-      
-      // Extract article content
-      if (crawledData.article) {
-        content = crawledData.article;
-      }
-      
-      // Process and embed images if available
-      if (crawledData.images && Array.isArray(crawledData.images)) {
-        crawledData.images.forEach((imgSrc: string) => {
-          if (!content.includes(imgSrc)) {
-            content = `<img src="${imgSrc}" alt="" class="my-4 max-w-full" />${content}`;
-          }
-        });
-      }
-      
-      return content || null;
-    }
-    
-    return null;
-  } catch (error) {
-    console.error('Error crawling article content:', error);
-    return null;
-  }
-};
-
 const rewriteArticle = async (content: string): Promise<string> => {
   try {
     console.log('Starting article rewrite with OpenAI');
@@ -123,7 +72,7 @@ const rewriteArticle = async (content: string): Promise<string> => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
@@ -170,35 +119,5 @@ const rewriteArticle = async (content: string): Promise<string> => {
       toast.error('Failed to rewrite article. Please try again later.');
     }
     throw error;
-  }
-};
-
-export const publishToWordPress = async (article: { 
-  title: string; 
-  content: string; 
-  status: 'publish' | 'draft' 
-}) => {
-  try {
-    const wpApiKey = await getApiKey('wordpress');
-    
-    if (!wpApiKey) {
-      toast.error('WordPress API key not found. Please add your API key in the settings.');
-      throw new Error('WordPress API key not found');
-    }
-
-    await axios.post(
-      `${WP_API_ENDPOINT}/posts`,
-      article,
-      {
-        headers: {
-          'Authorization': `Bearer ${wpApiKey}`,
-          'Content-Type': 'application/json'
-        }
-      }
-    );
-    console.log('Article published to WordPress');
-  } catch (error) {
-    console.error('Error publishing to WordPress:', error);
-    throw new Error('Failed to publish to WordPress');
   }
 };
