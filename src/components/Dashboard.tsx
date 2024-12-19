@@ -8,6 +8,7 @@ import { RefreshCw, Rss, CheckCircle, XCircle, ThumbsUp, ThumbsDown, Clock } fro
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { KeywordManager } from "@/components/KeywordManager";
 import { ArticlePreview } from "@/components/ArticlePreview";
+import { Settings } from "@/components/Settings";
 import { processArticle } from "@/services/articleService";
 import { useScheduleStore } from "@/services/rssService";
 import { toast } from "sonner";
@@ -82,6 +83,7 @@ export const Dashboard = () => {
             />
             <span className="text-sm text-muted-foreground">minutes</span>
           </div>
+          <Settings />
           <Button onClick={refreshFeeds} disabled={isRefreshing} className="gap-2">
             <RefreshCw className={`h-4 w-4 ${isRefreshing ? "animate-spin" : ""}`} />
             Refresh Feeds
