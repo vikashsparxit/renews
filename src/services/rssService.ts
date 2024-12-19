@@ -4,6 +4,7 @@ import { useKeywordStore } from './keywordService';
 import { create } from 'zustand';
 import { subHours, addMinutes } from 'date-fns';
 import { processArticle } from './articleService';
+import { clearExpiredCache } from './articleCacheService';
 import { toast } from "sonner";
 
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
@@ -66,6 +67,10 @@ const isWithinLast48Hours = (date: Date) => {
 export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   console.log('Fetching RSS feeds...');
   useScheduleStore.getState().setLastFetch(new Date());
+  
+  // Clear expired cache entries
+  await clearExpiredCache();
+  
   return RSS_FEEDS.map(feed => ({
     ...feed,
     status: 'active',

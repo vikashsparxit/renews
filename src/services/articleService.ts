@@ -3,14 +3,30 @@ import { Article } from './rssService';
 import { toast } from "sonner";
 import { getApiKey } from './storageService';
 import FirecrawlApp from '@mendable/firecrawl-js';
+import { getArticleFromCache, saveArticleToCache } from './articleCacheService';
 
-const WP_API_ENDPOINT = 'https://surinamnews.com/wp-json/wp/v2'; // Add the WordPress API endpoint
+const WP_API_ENDPOINT = 'https://surinamnews.com/wp-json/wp/v2';
 
 export const processArticle = async (article: Article): Promise<Article> => {
   console.log('Processing article:', article.title);
   
   try {
-    // First, crawl the full content from the URL
+    // Check cache first
+    const cachedArticle = await getArticleFromCache(article.url);
+    if (cachedArticle) {
+      console.log('Using cached version of article:', article.title);
+      return {
+        ...article,
+        content: cachedArticle.content,
+        rewrittenContent: cachedArticle.rewrittenContent,
+        status: 'scheduled'
+      };
+    }
+
+    // If not in cache, process the article
+    console.log('Article not in cache, processing:', article.title);
+    
+    // First, crawl the full content
     const fullContent = await crawlArticleContent(article.url);
     if (fullContent) {
       article.content = fullContent;
@@ -19,6 +35,18 @@ export const processArticle = async (article: Article): Promise<Article> => {
     // Then rewrite the content
     const rewrittenContent = await rewriteArticle(article.content);
     console.log('Article rewritten successfully');
+    
+    // Save to cache
+    await saveArticleToCache({
+      id: article.id,
+      title: article.title,
+      content: article.content,
+      rewrittenContent,
+      source: article.source,
+      timestamp: article.timestamp,
+      url: article.url,
+      cacheDate: new Date()
+    });
     
     return {
       ...article,
@@ -46,7 +74,7 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
-        elements: {
+        selectors: {
           content: 'article, .article, .post-content, .entry-content',
           images: 'img'
         }
@@ -63,8 +91,8 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       }
       
       // Process and embed images if available
-      if (crawledData.elements?.images && Array.isArray(crawledData.elements.images)) {
-        crawledData.elements.images.forEach((imgSrc: string) => {
+      if (crawledData.images && Array.isArray(crawledData.images)) {
+        crawledData.images.forEach((imgSrc: string) => {
           if (!content.includes(imgSrc)) {
             content = `<img src="${imgSrc}" alt="" class="my-4 max-w-full" />${content}`;
           }
