@@ -1,5 +1,5 @@
 import { format } from "date-fns";
-import { ExternalLink, PauseCircle, AlertCircle } from "lucide-react";
+import { ExternalLink, PauseCircle, AlertCircle, Loader } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { ArticlePreview } from "@/components/ArticlePreview";
@@ -76,6 +76,15 @@ export const ScheduledArticleList = ({
                 )}
                 <span>•</span>
                 <span>{article.source}</span>
+                {!article.rewrittenContent && (
+                  <>
+                    <span>•</span>
+                    <span className="flex items-center gap-1 text-yellow-600">
+                      <Loader className="h-3 w-3 animate-spin" />
+                      Content is processing
+                    </span>
+                  </>
+                )}
               </div>
             </div>
             <div className="flex items-center gap-2">
@@ -101,8 +110,8 @@ export const ScheduledArticleList = ({
                 <Button
                   variant="ghost"
                   onClick={() => onPublishArticle?.(article.id)}
-                  disabled={!hasWordPress}
-                  title={hasWordPress ? "Publish now" : "Configure WordPress to publish"}
+                  disabled={!hasWordPress || !article.rewrittenContent}
+                  title={!hasWordPress ? "Configure WordPress to publish" : !article.rewrittenContent ? "Content is still processing" : "Publish now"}
                 >
                   Publish
                 </Button>

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle } from "lucide-react";
+import { AlertTriangle, CheckCircle, Loader } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getApiKey, saveApiKey } from "@/services/storageService";
@@ -113,6 +113,18 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
     );
   };
 
+  const renderKeyStatus = (keyType: string, hasKey: boolean) => {
+    if (hasKey) {
+      return (
+        <div className="text-sm text-green-600 flex items-center gap-2 mt-1">
+          <CheckCircle className="h-4 w-4" />
+          <span>{keyType} key is saved and active</span>
+        </div>
+      );
+    }
+    return null;
+  };
+
   return (
     <Dialog>
       <DialogTrigger asChild>
@@ -151,8 +163,10 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
                 type="password"
                 value={openaiKey}
                 onChange={(e) => setOpenaiKey(e.target.value)}
-                placeholder="Enter OpenAI API key"
+                placeholder={hasOpenAI ? "API key is saved" : "Enter OpenAI API key"}
+                className={hasOpenAI ? "bg-gray-50" : ""}
               />
+              {renderKeyStatus("OpenAI", hasOpenAI)}
             </div>
             <Button onClick={handleSaveOpenAI} className="w-full">
               Save OpenAI Settings
@@ -174,15 +188,17 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
                 type="url"
                 value={wordpressSiteUrl}
                 onChange={(e) => setWordpressSiteUrl(e.target.value)}
-                placeholder="WordPress Site URL (e.g., https://your-site.com)"
-                className="mb-2"
+                placeholder={hasWordPress ? "WordPress site URL is saved" : "WordPress Site URL (e.g., https://your-site.com)"}
+                className={hasWordPress ? "bg-gray-50" : ""}
               />
               <Input
                 type="password"
                 value={wordpressKey}
                 onChange={(e) => setWordpressKey(e.target.value)}
-                placeholder="WordPress Application Password"
+                placeholder={hasWordPress ? "Application password is saved" : "WordPress Application Password"}
+                className={hasWordPress ? "bg-gray-50" : ""}
               />
+              {renderKeyStatus("WordPress", hasWordPress)}
               {getWordPressInstructions()}
             </div>
             <Button onClick={handleSaveWordPress} className="w-full">
@@ -209,8 +225,10 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
                     type="password"
                     value={firecrawlKey}
                     onChange={(e) => setFirecrawlKey(e.target.value)}
-                    placeholder="Enter Firecrawl API key"
+                    placeholder={hasFirecrawl ? "Firecrawl API key is saved" : "Enter Firecrawl API key"}
+                    className={hasFirecrawl ? "bg-gray-50" : ""}
                   />
+                  {renderKeyStatus("Firecrawl", hasFirecrawl)}
                 </div>
               )}
             </div>
