@@ -14,13 +14,10 @@ const DB_NAME = 'renews_cache';
 const DB_VERSION = 1;
 const STORE_NAME = 'articles';
 
-export const initDB = (): Promise<void> => {
-  return new Promise((resolve, reject) => {
-    if (db) {
-      resolve();
-      return;
-    }
+const initDB = async (): Promise<void> => {
+  if (db) return;
 
+  return new Promise((resolve, reject) => {
     console.log('Initializing IndexedDB...');
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
@@ -29,16 +26,17 @@ export const initDB = (): Promise<void> => {
       reject(new Error('Failed to open IndexedDB'));
     };
 
-    request.onsuccess = (event) => {
+    request.onsuccess = (event: Event) => {
       const target = event.target as IDBOpenDBRequest;
       db = target.result;
       console.log('IndexedDB opened successfully');
       resolve();
     };
 
-    request.onupgradeneeded = (event) => {
+    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
       const target = event.target as IDBOpenDBRequest;
       const database = target.result;
+      
       if (!database.objectStoreNames.contains(STORE_NAME)) {
         database.createObjectStore(STORE_NAME, { keyPath: 'url' });
         console.log('Article store created successfully');
@@ -47,14 +45,9 @@ export const initDB = (): Promise<void> => {
   });
 };
 
-// Call initDB when the module loads
-initDB().catch(console.error);
-
 export const saveArticleToCache = async (article: Article): Promise<void> => {
-  if (!db) {
-    await initDB();
-  }
-
+  await initDB();
+  
   return new Promise((resolve, reject) => {
     if (!db) {
       reject(new Error('Database not initialized'));
@@ -78,9 +71,7 @@ export const saveArticleToCache = async (article: Article): Promise<void> => {
 };
 
 export const getArticleFromCache = async (url: string): Promise<Article | undefined> => {
-  if (!db) {
-    await initDB();
-  }
+  await initDB();
 
   return new Promise((resolve, reject) => {
     if (!db) {
@@ -92,7 +83,7 @@ export const getArticleFromCache = async (url: string): Promise<Article | undefi
     const store = transaction.objectStore(STORE_NAME);
     const request = store.get(url);
 
-    request.onsuccess = (event) => {
+    request.onsuccess = (event: Event) => {
       const target = event.target as IDBRequest;
       resolve(target.result);
     };
@@ -105,9 +96,7 @@ export const getArticleFromCache = async (url: string): Promise<Article | undefi
 };
 
 export const clearExpiredCache = async (): Promise<void> => {
-  if (!db) {
-    await initDB();
-  }
+  await initDB();
 
   return new Promise((resolve, reject) => {
     if (!db) {
@@ -121,7 +110,7 @@ export const clearExpiredCache = async (): Promise<void> => {
     const TWO_DAYS = 2 * 24 * 60 * 60 * 1000;
     const now = new Date().getTime();
 
-    request.onsuccess = (event) => {
+    request.onsuccess = (event: Event) => {
       const target = event.target as IDBRequest;
       const cursor = target.result as IDBCursorWithValue;
       
