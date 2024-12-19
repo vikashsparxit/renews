@@ -46,11 +46,39 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
+        selectors: {
+          article: {
+            selector: 'article, .article, .post-content, .entry-content',
+            type: 'html'
+          },
+          images: {
+            selector: 'img',
+            type: 'attribute',
+            attribute: 'src'
+          }
+        }
       }
     });
 
-    if (result.success && result.data?.[0]?.content) {
-      return result.data[0].content;
+    if (result.success && result.data?.[0]) {
+      const crawledData = result.data[0];
+      let content = '';
+      
+      // Extract article content
+      if (crawledData.article) {
+        content = crawledData.article;
+      }
+      
+      // Process and embed images
+      if (crawledData.images && Array.isArray(crawledData.images)) {
+        crawledData.images.forEach((imgSrc: string) => {
+          if (!content.includes(imgSrc)) {
+            content = `<img src="${imgSrc}" alt="" class="my-4 max-w-full" />${content}`;
+          }
+        });
+      }
+      
+      return content || null;
     }
     
     return null;
@@ -73,7 +101,7 @@ const rewriteArticle = async (content: string): Promise<string> => {
     const response = await axios.post(
       'https://api.openai.com/v1/chat/completions',
       {
-        model: 'gpt-4o',
+        model: 'gpt-4',
         messages: [
           {
             role: 'system',
@@ -102,7 +130,16 @@ const rewriteArticle = async (content: string): Promise<string> => {
       throw new Error('Invalid response from OpenAI');
     }
     
-    return response.data.choices[0].message.content;
+    // Preserve images from original content
+    const images = content.match(/<img[^>]+>/g) || [];
+    let rewrittenContent = response.data.choices[0].message.content;
+    
+    // Add preserved images back to the rewritten content
+    images.forEach(img => {
+      rewrittenContent = img + '\n' + rewrittenContent;
+    });
+    
+    return rewrittenContent;
   } catch (error) {
     console.error('Error rewriting article:', error);
     if (axios.isAxiosError(error) && error.response?.status === 401) {
