@@ -46,8 +46,8 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
-        selectors: {
-          article: {
+        elements: {
+          content: {
             selector: 'article, .article, .post-content, .entry-content',
             type: 'html'
           },
@@ -65,8 +65,8 @@ const crawlArticleContent = async (url: string): Promise<string | null> => {
       let content = '';
       
       // Extract article content
-      if (crawledData.article) {
-        content = crawledData.article;
+      if (crawledData.content) {
+        content = crawledData.content;
       }
       
       // Process and embed images
