@@ -1,5 +1,6 @@
 import axios from 'axios';
 import { XMLParser } from 'fast-xml-parser';
+import { useKeywordStore } from './keywordService';
 
 export interface RSSFeed {
   name: string;
@@ -31,6 +32,12 @@ const RSS_FEEDS = [
   }
 ];
 
+const containsKeyword = (text: string, keywords: Array<{ text: string, active: boolean }>) => {
+  const activeKeywords = keywords.filter(k => k.active);
+  const lowerText = text.toLowerCase();
+  return activeKeywords.some(keyword => lowerText.includes(keyword.text.toLowerCase()));
+};
+
 export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   console.log('Fetching RSS feeds...');
   return RSS_FEEDS.map(feed => ({
@@ -44,6 +51,7 @@ export const fetchArticles = async (): Promise<Article[]> => {
   console.log('Fetching articles...');
   const parser = new XMLParser();
   const articles: Article[] = [];
+  const keywords = useKeywordStore.getState().keywords;
 
   for (const feed of RSS_FEEDS) {
     try {
@@ -55,18 +63,23 @@ export const fetchArticles = async (): Promise<Article[]> => {
       const items = result.rss?.channel?.item || [];
       console.log(`Parsing ${items.length} items from ${feed.name}`);
 
-      const feedArticles = items.map((item: any) => ({
-        id: item.guid || item.link,
-        title: item.title,
-        content: item.description || '',
-        source: feed.name,
-        timestamp: new Date(item.pubDate),
-        status: 'pending' as const,
-        url: item.link
-      }));
+      const feedArticles = items
+        .map((item: any) => ({
+          id: item.guid || item.link,
+          title: item.title,
+          content: item.description || '',
+          source: feed.name,
+          timestamp: new Date(item.pubDate),
+          status: 'pending' as const,
+          url: item.link
+        }))
+        .filter((article: Article) => 
+          containsKeyword(article.title, keywords) || 
+          containsKeyword(article.content, keywords)
+        );
 
       articles.push(...feedArticles);
-      console.log(`Successfully parsed ${feedArticles.length} articles from ${feed.name}`);
+      console.log(`Successfully parsed ${feedArticles.length} matching articles from ${feed.name}`);
     } catch (error) {
       console.error(`Error fetching ${feed.name}:`, error);
     }
