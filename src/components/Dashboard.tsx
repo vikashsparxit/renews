@@ -13,7 +13,6 @@ import { RSSFeedManager } from "@/components/RSSFeedManager";
 import { useScheduleStore } from "@/services/rssService";
 import { toast } from "sonner";
 import { useEffect, useState, useCallback } from "react";
-import { RequiredKeysModal } from "@/components/RequiredKeysModal";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();

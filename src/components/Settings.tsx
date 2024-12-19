@@ -11,6 +11,8 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { AlertTriangle } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getApiKey, saveApiKey } from "@/services/storageService";
@@ -25,8 +27,19 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
   const [firecrawlKey, setFirecrawlKey] = useState('');
   const [wordpressSiteUrl, setWordpressSiteUrl] = useState('');
   const [crawlingMethod, setCrawlingMethod] = useState('firecrawl');
+  const [hasAllKeys, setHasAllKeys] = useState(false);
 
   useEffect(() => {
+    const checkExistingKeys = async () => {
+      const openai = await getApiKey('openai');
+      const wordpress = await getApiKey('wordpress');
+      const firecrawl = await getApiKey('firecrawl');
+      
+      setHasAllKeys(Boolean(openai && wordpress && firecrawl));
+    };
+
+    checkExistingKeys();
+    
     // Load saved WordPress site URL
     const savedUrl = localStorage.getItem('wp_site_url');
     if (savedUrl) setWordpressSiteUrl(savedUrl);
@@ -38,6 +51,11 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
 
   const handleSave = async () => {
     try {
+      // Save API keys if provided
+      if (openaiKey) await saveApiKey('openai', openaiKey);
+      if (wordpressKey) await saveApiKey('wordpress', wordpressKey);
+      if (firecrawlKey) await saveApiKey('firecrawl', firecrawlKey);
+      
       // Validate WordPress site URL if provided
       if (wordpressSiteUrl) {
         try {
@@ -48,11 +66,6 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
           return;
         }
       }
-
-      // Save API keys
-      if (openaiKey) await saveApiKey('openai', openaiKey);
-      if (wordpressKey) await saveApiKey('wordpress', wordpressKey);
-      if (firecrawlKey) await saveApiKey('firecrawl', firecrawlKey);
       
       // Save crawling method preference
       localStorage.setItem('crawling_method', crawlingMethod);
@@ -97,6 +110,16 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
             Configure your API keys and integration settings
           </DialogDescription>
         </DialogHeader>
+        
+        {!hasAllKeys && (
+          <Alert variant="warning" className="mb-4">
+            <AlertTriangle className="h-4 w-4" />
+            <AlertDescription>
+              Some API keys are missing. The application may have limited functionality until all keys are provided.
+            </AlertDescription>
+          </Alert>
+        )}
+        
         <div className="space-y-4 py-4">
           <div className="space-y-2">
             <Label htmlFor="openai">OpenAI API Key</Label>
