@@ -45,7 +45,8 @@ const crawlWithFirecrawl = async (url: string): Promise<string | null> => {
       limit: 1,
       scrapeOptions: {
         formats: ['html'],
-        selectors: {
+        contentTypes: ['article', 'images'],
+        contentSelectors: {
           article: 'article, .article, .post-content, .entry-content',
           images: 'img'
         }
@@ -56,19 +57,20 @@ const crawlWithFirecrawl = async (url: string): Promise<string | null> => {
       const crawledData = result.data[0];
       let content = '';
       
-      // Extract article content using the specified selectors
-      const articleContent = crawledData.querySelector('article, .article, .post-content, .entry-content');
-      if (articleContent) {
-        content = articleContent.innerHTML;
+      // Extract article content from the crawled data
+      if (crawledData.content?.article) {
+        content = crawledData.content.article;
       }
       
-      // Process and embed images
-      const images = crawledData.querySelectorAll('img');
-      if (images && images.length > 0) {
-        images.forEach((img: Element) => {
-          const imgSrc = img.getAttribute('src');
-          if (imgSrc && !content.includes(imgSrc)) {
-            content = `<img src="${imgSrc}" alt="" class="my-4 max-w-full" />${content}`;
+      // Add images if available
+      if (crawledData.content?.images) {
+        const images = Array.isArray(crawledData.content.images) 
+          ? crawledData.content.images 
+          : [crawledData.content.images];
+          
+        images.forEach((img: string) => {
+          if (!content.includes(img)) {
+            content = `<img src="${img}" alt="" class="my-4 max-w-full" />${content}`;
           }
         });
       }

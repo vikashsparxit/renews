@@ -60,7 +60,7 @@ export const RequiredKeysModal = ({ onComplete }: { onComplete: () => void }) =>
 
   return (
     <Dialog open={isOpen} onOpenChange={() => {}}>
-      <DialogContent className="sm:max-w-md" showClose={false}>
+      <DialogContent className="sm:max-w-md">
         <DialogHeader>
           <DialogTitle>Required API Keys</DialogTitle>
           <DialogDescription>
