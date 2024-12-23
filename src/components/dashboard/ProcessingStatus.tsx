@@ -4,9 +4,14 @@ import { Progress } from "@/components/ui/progress";
 import { Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
+import { useFeedStore } from "@/services/rssService";
 
 export const ProcessingStatus = () => {
   const { articles, isRefreshing, lastProcessedTime } = useRSSFeeds();
+  const feeds = useFeedStore((state) => state.feeds);
+  
+  // Only show status if we have configured feeds or are refreshing
+  if (!isRefreshing && !feeds.length) return null;
   
   const totalArticles = articles?.length || 0;
   const crawledArticles = articles?.filter(a => a.content).length || 0;
@@ -43,8 +48,6 @@ export const ProcessingStatus = () => {
       status: processedArticles === totalArticles && scheduledArticles > 0 ? 'complete' : 'pending',
     },
   ];
-
-  if (!isRefreshing && !totalArticles) return null;
 
   return (
     <Card className="mb-6">

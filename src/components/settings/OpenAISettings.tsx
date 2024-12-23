@@ -1,11 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Button } from "@/components/ui/button";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { AlertTriangle, CheckCircle, Loader2 } from "lucide-react";
 import { toast } from "sonner";
-import { saveApiKey } from "@/services/storageService";
+import { saveApiKey, getApiKey } from "@/services/storageService";
 
 interface OpenAISettingsProps {
   onApiKeySaved?: () => void;
@@ -15,6 +15,16 @@ interface OpenAISettingsProps {
 export const OpenAISettings = ({ onApiKeySaved, hasOpenAI }: OpenAISettingsProps) => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [isSaving, setIsSaving] = useState(false);
+  const [keyExists, setKeyExists] = useState(hasOpenAI);
+
+  useEffect(() => {
+    const checkExistingKey = async () => {
+      const key = await getApiKey('openai');
+      setKeyExists(Boolean(key));
+    };
+    
+    checkExistingKey();
+  }, []);
 
   const handleSaveOpenAI = async () => {
     if (!openaiKey.trim()) {
@@ -27,6 +37,7 @@ export const OpenAISettings = ({ onApiKeySaved, hasOpenAI }: OpenAISettingsProps
       console.log('Attempting to save OpenAI key...');
       await saveApiKey('openai', openaiKey);
       console.log('OpenAI key saved successfully');
+      setKeyExists(true);
       toast.success('OpenAI API key saved successfully');
       onApiKeySaved?.();
     } catch (error) {
@@ -39,7 +50,7 @@ export const OpenAISettings = ({ onApiKeySaved, hasOpenAI }: OpenAISettingsProps
 
   return (
     <div className="space-y-4">
-      {!hasOpenAI && (
+      {!keyExists && (
         <Alert variant="destructive">
           <AlertTriangle className="h-4 w-4" />
           <AlertDescription>
@@ -54,10 +65,10 @@ export const OpenAISettings = ({ onApiKeySaved, hasOpenAI }: OpenAISettingsProps
           type="password"
           value={openaiKey}
           onChange={(e) => setOpenaiKey(e.target.value)}
-          placeholder={hasOpenAI ? "API key is saved" : "Enter OpenAI API key"}
-          className={hasOpenAI ? "bg-gray-50" : ""}
+          placeholder={keyExists ? "API key is saved" : "Enter OpenAI API key"}
+          className={keyExists ? "bg-gray-50" : ""}
         />
-        {hasOpenAI && (
+        {keyExists && (
           <div className="text-sm text-green-600 flex items-center gap-2 mt-1">
             <CheckCircle className="h-4 w-4" />
             <span>OpenAI key is saved and active</span>

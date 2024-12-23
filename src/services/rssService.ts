@@ -16,6 +16,23 @@ export interface RSSFeed {
   lastUpdate: Date;
 }
 
+// Move RSS feeds to store to make them configurable
+interface FeedStore {
+  feeds: RSSFeed[];
+  addFeed: (feed: Omit<RSSFeed, 'status' | 'lastUpdate'>) => void;
+  removeFeed: (url: string) => void;
+}
+
+export const useFeedStore = create<FeedStore>((set) => ({
+  feeds: [],
+  addFeed: (feed) => set((state) => ({
+    feeds: [...state.feeds, { ...feed, status: 'active', lastUpdate: new Date() }]
+  })),
+  removeFeed: (url) => set((state) => ({
+    feeds: state.feeds.filter(f => f.url !== url)
+  }))
+}));
+
 export interface Article {
   id: string;
   title: string;
@@ -44,17 +61,6 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
   setLastFetch: (date) => set({ lastFetch: date }),
 }));
 
-const RSS_FEEDS = [
-  {
-    name: 'Starnieuws',
-    url: 'https://www.starnieuws.com/rss/index.rss'
-  },
-  {
-    name: 'Waterkant',
-    url: 'https://www.waterkant.net/feed/'
-  }
-];
-
 const containsKeyword = (text: string, keywords: Array<{ text: string, active: boolean }>) => {
   const activeKeywords = keywords.filter(k => k.active);
   const lowerText = text.toLowerCase();
@@ -73,9 +79,16 @@ export const fetchFeeds = async (): Promise<RSSFeed[]> => {
   // Clear expired cache entries
   await clearExpiredCache();
   
+  const configuredFeeds = useFeedStore.getState().feeds;
+  if (!configuredFeeds.length) {
+    console.log('No RSS feeds configured');
+    return [];
+  }
+  
   const feedStatuses = await Promise.all(
-    RSS_FEEDS.map(async (feed) => {
+    configuredFeeds.map(async (feed) => {
       try {
+        console.log(`Fetching ${feed.name}`);
         const response = await axios.get(`${CORS_PROXY}${feed.url}`);
         const parser = new XMLParser();
         const result = parser.parse(response.data);
@@ -105,6 +118,13 @@ export const fetchFeeds = async (): Promise<RSSFeed[]> => {
 
 export const fetchArticles = async (): Promise<Article[]> => {
   console.log('Fetching articles from the last 48 hours...');
+  const configuredFeeds = useFeedStore.getState().feeds;
+  
+  if (!configuredFeeds.length) {
+    console.log('No RSS feeds configured');
+    return [];
+  }
+
   const parser = new XMLParser();
   const articles: Article[] = [];
   const keywords = useKeywordStore.getState().keywords;
@@ -115,7 +135,7 @@ export const fetchArticles = async (): Promise<Article[]> => {
   const previousArticleIds = JSON.parse(localStorage.getItem('fetchedArticleIds') || '[]');
   const newArticleIds: string[] = [];
 
-  for (const feed of RSS_FEEDS) {
+  for (const feed of configuredFeeds) {
     try {
       console.log(`Fetching ${feed.name}`);
       const response = await axios.get(`${CORS_PROXY}${feed.url}`);
