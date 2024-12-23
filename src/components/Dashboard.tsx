@@ -6,10 +6,11 @@ import { useEffect, useState, useCallback } from "react";
 import { DashboardHeader } from "./dashboard/DashboardHeader";
 import { DashboardCards } from "./dashboard/DashboardCards";
 import { ArticleCards } from "./dashboard/ArticleCards";
-import { getApiKey } from "@/services/storageService";
-import { publishToWordPress } from "@/services/wordpressService";
+import { ProcessingStatus } from "./dashboard/ProcessingStatus";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader } from "lucide-react";
+import { getApiKey } from "@/services/storageService";
+import { publishToWordPress } from "@/services/wordpressService";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
@@ -73,6 +74,7 @@ export const Dashboard = () => {
     }
   };
 
+  // Filter articles that have completed processing for Recent Articles
   const recentArticles = articles?.filter(a => a.rewrittenContent) || [];
   const scheduledArticles = articles?.filter(a => a.status === 'scheduled' && a.scheduledTime) || [];
 
@@ -84,6 +86,8 @@ export const Dashboard = () => {
         onIntervalChange={handleIntervalChange}
         onRefresh={refreshFeeds}
       />
+
+      <ProcessingStatus />
 
       {isRefreshing && (
         <Alert className="bg-blue-50 dark:bg-blue-900/20">

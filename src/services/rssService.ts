@@ -169,6 +169,16 @@ export const fetchArticles = async (): Promise<Article[]> => {
         } catch (error) {
           console.error(`Error processing article: ${article.title}`, error);
           toast.error(`Failed to process article: ${article.title}`);
+          
+          // Update the article to show the error state
+          const index = articles.findIndex(a => a.id === article.id);
+          if (index !== -1) {
+            articles[index] = {
+              ...articles[index],
+              status: 'error',
+              error: error instanceof Error ? error.message : 'Failed to process article'
+            };
+          }
         }
       });
 
