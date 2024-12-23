@@ -5,53 +5,60 @@ import { Badge } from "@/components/ui/badge";
 import { Trash2 } from "lucide-react";
 import { formatDistanceToNow } from 'date-fns';
 import { toast } from "sonner";
-import { RSSFeed } from '@/services/rssService';
+import { RSSFeed, useFeedStore } from '@/services/rssService';
 
-interface RSSFeedManagerProps {
-  feeds: RSSFeed[];
-  onAddFeed: (url: string) => void;
-  onDeleteFeed: (url: string) => void;
-}
-
-export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
-  feeds,
-  onAddFeed,
-  onDeleteFeed,
-}) => {
+export const RSSFeedManager: React.FC = () => {
   const [newFeedUrl, setNewFeedUrl] = useState('');
+  const [newFeedName, setNewFeedName] = useState('');
+  const { feeds, addFeed, removeFeed } = useFeedStore();
 
   const handleAddFeed = () => {
-    if (!newFeedUrl) {
-      toast.error('Please enter a feed URL');
+    if (!newFeedUrl || !newFeedName) {
+      toast.error('Please enter both feed name and URL');
       return;
     }
 
     try {
       new URL(newFeedUrl);
-      onAddFeed(newFeedUrl);
+      addFeed({ name: newFeedName, url: newFeedUrl });
       setNewFeedUrl('');
+      setNewFeedName('');
       toast.success('Feed added successfully');
     } catch (error) {
       toast.error('Please enter a valid URL');
     }
   };
 
+  const handleDeleteFeed = (url: string) => {
+    removeFeed(url);
+    toast.success('Feed removed successfully');
+  };
+
   return (
     <div className="space-y-4">
-      <div className="flex gap-2">
+      <div className="space-y-2">
         <Input
-          type="url"
-          value={newFeedUrl}
-          onChange={(e) => setNewFeedUrl(e.target.value)}
-          placeholder="Enter RSS feed URL"
-          className="flex-1"
+          type="text"
+          value={newFeedName}
+          onChange={(e) => setNewFeedName(e.target.value)}
+          placeholder="Enter feed name (e.g., Waterkant)"
+          className="mb-2"
         />
-        <Button 
-          onClick={handleAddFeed}
-          className="bg-primary hover:bg-primary/90 text-white font-medium"
-        >
-          Add Feed
-        </Button>
+        <div className="flex gap-2">
+          <Input
+            type="url"
+            value={newFeedUrl}
+            onChange={(e) => setNewFeedUrl(e.target.value)}
+            placeholder="Enter RSS feed URL"
+            className="flex-1"
+          />
+          <Button 
+            onClick={handleAddFeed}
+            className="bg-primary hover:bg-primary/90 text-white font-medium"
+          >
+            Add Feed
+          </Button>
+        </div>
       </div>
       
       <div className="space-y-4">
@@ -60,9 +67,11 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
             <div className="space-y-2">
               <h3 className="font-medium">{feed.name}</h3>
               <p className="text-sm text-muted-foreground">{feed.url}</p>
-              <div className="text-xs text-muted-foreground">
-                {formatDistanceToNow(feed.lastUpdate)} ago
-              </div>
+              {feed.lastUpdate && (
+                <div className="text-xs text-muted-foreground">
+                  {formatDistanceToNow(feed.lastUpdate)} ago
+                </div>
+              )}
             </div>
             <div className="flex items-center gap-2">
               <Badge 
@@ -74,7 +83,7 @@ export const RSSFeedManager: React.FC<RSSFeedManagerProps> = ({
               <Button
                 variant="ghost"
                 size="icon"
-                onClick={() => onDeleteFeed(feed.url)}
+                onClick={() => handleDeleteFeed(feed.url)}
                 className="text-destructive hover:text-destructive/90"
               >
                 <Trash2 className="h-4 w-4" />

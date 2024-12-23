@@ -6,6 +6,7 @@ import { subHours, addMinutes } from 'date-fns';
 import { processArticle } from './articleService';
 import { clearExpiredCache } from './articleCacheService';
 import { toast } from "sonner";
+import { persist } from 'zustand/middleware';
 
 const CORS_PROXY = 'https://api.allorigins.win/raw?url=';
 
@@ -21,17 +22,34 @@ interface FeedStore {
   feeds: RSSFeed[];
   addFeed: (feed: Omit<RSSFeed, 'status' | 'lastUpdate'>) => void;
   removeFeed: (url: string) => void;
+  updateFeedStatus: (url: string, status: 'active' | 'error') => void;
 }
 
-export const useFeedStore = create<FeedStore>((set) => ({
-  feeds: [],
-  addFeed: (feed) => set((state) => ({
-    feeds: [...state.feeds, { ...feed, status: 'active', lastUpdate: new Date() }]
-  })),
-  removeFeed: (url) => set((state) => ({
-    feeds: state.feeds.filter(f => f.url !== url)
-  }))
-}));
+export const useFeedStore = create<FeedStore>()(
+  persist(
+    (set) => ({
+      feeds: [],
+      addFeed: (feed) => set((state) => ({
+        feeds: [...state.feeds, { 
+          ...feed, 
+          status: 'active', 
+          lastUpdate: new Date() 
+        }]
+      })),
+      removeFeed: (url) => set((state) => ({
+        feeds: state.feeds.filter(f => f.url !== url)
+      })),
+      updateFeedStatus: (url, status) => set((state) => ({
+        feeds: state.feeds.map(f => 
+          f.url === url ? { ...f, status } : f
+        )
+      }))
+    }),
+    {
+      name: 'feed-storage',
+    }
+  )
+);
 
 export interface Article {
   id: string;

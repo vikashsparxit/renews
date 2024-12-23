@@ -12,9 +12,23 @@ export const KeywordManager = () => {
 
   const handleAddKeyword = () => {
     if (newKeyword.trim()) {
+      // Check for duplicates
+      if (keywords.some(k => k.text.toLowerCase() === newKeyword.trim().toLowerCase())) {
+        toast.error('This keyword already exists');
+        return;
+      }
+      
       addKeyword(newKeyword.trim());
       setNewKeyword('');
       toast.success('Keyword added successfully');
+    } else {
+      toast.error('Please enter a keyword');
+    }
+  };
+
+  const handleKeyPress = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') {
+      handleAddKeyword();
     }
   };
 
@@ -25,7 +39,8 @@ export const KeywordManager = () => {
           placeholder="Add new keyword..."
           value={newKeyword}
           onChange={(e) => setNewKeyword(e.target.value)}
-          onKeyPress={(e) => e.key === 'Enter' && handleAddKeyword()}
+          onKeyPress={handleKeyPress}
+          className="flex-1"
         />
         <Button onClick={handleAddKeyword} size="icon">
           <Plus className="h-4 w-4" />
@@ -51,6 +66,11 @@ export const KeywordManager = () => {
           </Badge>
         ))}
       </div>
+      {!keywords.length && (
+        <p className="text-sm text-muted-foreground">
+          No keywords added yet. Keywords help filter articles based on your interests.
+        </p>
+      )}
     </div>
   );
 };
