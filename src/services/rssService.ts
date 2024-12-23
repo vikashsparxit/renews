@@ -1,4 +1,3 @@
-import { create } from 'zustand';
 import { subHours, addMinutes } from 'date-fns';
 import { processArticle } from './articleService';
 import { clearExpiredCache } from './articleCacheService';
@@ -55,6 +54,8 @@ export const fetchFeeds = async () => {
   await clearExpiredCache();
   
   const configuredFeeds = useFeedStore.getState().feeds;
+  const updateFeedStore = useFeedStore.getState();
+  
   if (!configuredFeeds.length) {
     console.log('No RSS feeds configured');
     return [];
@@ -70,18 +71,33 @@ export const fetchFeeds = async () => {
           throw new Error('Invalid RSS feed format');
         }
         
-        return {
+        // Update feed status and lastUpdate time
+        const updatedFeed = {
           ...feed,
           status: 'active' as const,
           lastUpdate: new Date()
         };
+        
+        // Update the feed in the store
+        updateFeedStore.feeds = updateFeedStore.feeds.map(f => 
+          f.url === feed.url ? updatedFeed : f
+        );
+        
+        return updatedFeed;
       } catch (error) {
         console.error(`Error checking feed ${feed.url}:`, error);
-        return {
+        const errorFeed = {
           ...feed,
           status: 'error' as const,
           lastUpdate: new Date()
         };
+        
+        // Update the feed in the store
+        updateFeedStore.feeds = updateFeedStore.feeds.map(f => 
+          f.url === feed.url ? errorFeed : f
+        );
+        
+        return errorFeed;
       }
     })
   );
