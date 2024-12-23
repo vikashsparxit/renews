@@ -1,32 +1,42 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { fetchFeeds, fetchArticles, refreshFeeds, type Article, type RSSFeed } from "@/services/rssService";
+import { useQuery } from "@tanstack/react-query";
+import { fetchFeeds, fetchArticles } from "@/services/rssService";
+import { useState } from "react";
 
 export const useRSSFeeds = () => {
-  const queryClient = useQueryClient();
-
-  const feedsQuery = useQuery({
-    queryKey: ["feeds"],
+  const [lastProcessedTime, setLastProcessedTime] = useState<Date | null>(null);
+  
+  const { 
+    data: feeds,
+    isLoading: isFeedsLoading,
+  } = useQuery({
+    queryKey: ['feeds'],
     queryFn: fetchFeeds,
   });
 
-  const articlesQuery = useQuery({
-    queryKey: ["articles"],
-    queryFn: fetchArticles,
-  });
-
-  const refreshMutation = useMutation({
-    mutationFn: refreshFeeds,
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: ["feeds"] });
-      queryClient.invalidateQueries({ queryKey: ["articles"] });
+  const {
+    data: articles,
+    isLoading: isArticlesLoading,
+    isRefetching: isArticlesRefetching,
+    refetch: refetchArticles,
+  } = useQuery({
+    queryKey: ['articles'],
+    queryFn: async () => {
+      const articles = await fetchArticles();
+      setLastProcessedTime(new Date());
+      return articles;
     },
   });
 
+  const refresh = () => {
+    refetchArticles();
+  };
+
   return {
-    feeds: feedsQuery.data as RSSFeed[],
-    articles: articlesQuery.data as Article[],
-    isLoading: feedsQuery.isLoading || articlesQuery.isLoading,
-    isRefreshing: refreshMutation.isPending,
-    refresh: refreshMutation.mutate,
+    feeds,
+    articles,
+    isLoading: isFeedsLoading || isArticlesLoading,
+    isRefreshing: isArticlesRefetching,
+    refresh,
+    lastProcessedTime,
   };
 };
