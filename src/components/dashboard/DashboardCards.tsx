@@ -43,11 +43,7 @@ export const DashboardCards = ({ feeds, lastFetch }: DashboardCardsProps) => {
               <p>No RSS feeds configured. Add feeds to start aggregating news articles.</p>
             </div>
           ) : (
-            <RSSFeedManager
-              feeds={feeds}
-              onAddFeed={(url) => console.log('Adding feed:', url)}
-              onDeleteFeed={(url) => console.log('Deleting feed:', url)}
-            />
+            <RSSFeedManager />
           )}
           {lastFetch && (
             <div className="text-sm text-muted-foreground mt-4 italic">
