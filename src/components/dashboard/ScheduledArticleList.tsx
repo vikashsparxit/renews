@@ -43,6 +43,10 @@ export const ScheduledArticleList = ({
     await saveAutoSchedule(checked);
   };
 
+  const isArticleReadyToPublish = (article: Article) => {
+    return article.rewrittenContent !== undefined;
+  };
+
   return (
     <div className="space-y-4">
       <div className="flex items-center justify-between mb-4">
@@ -110,8 +114,8 @@ export const ScheduledArticleList = ({
                 <Button
                   variant="ghost"
                   onClick={() => onPublishArticle?.(article.id)}
-                  disabled={!hasWordPress || !article.rewrittenContent}
-                  title={!hasWordPress ? "Configure WordPress to publish" : !article.rewrittenContent ? "Content is still processing" : "Publish now"}
+                  disabled={!hasWordPress || !isArticleReadyToPublish(article)}
+                  title={!hasWordPress ? "Configure WordPress to publish" : !isArticleReadyToPublish(article) ? "Content is still processing" : "Publish now"}
                 >
                   Publish
                 </Button>

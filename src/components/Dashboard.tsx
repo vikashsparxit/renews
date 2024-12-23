@@ -8,6 +8,8 @@ import { DashboardCards } from "./dashboard/DashboardCards";
 import { ArticleCards } from "./dashboard/ArticleCards";
 import { getApiKey } from "@/services/storageService";
 import { publishToWordPress } from "@/services/wordpressService";
+import { Alert, AlertDescription } from "@/components/ui/alert";
+import { Loader } from "lucide-react";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
@@ -53,9 +55,14 @@ export const Dashboard = () => {
       const article = articles?.find(a => a.id === articleId);
       if (!article) return;
       
+      if (!article.rewrittenContent) {
+        toast.error('Cannot publish while content is still processing');
+        return;
+      }
+      
       await publishToWordPress({
         title: article.title,
-        content: article.rewrittenContent || article.content,
+        content: article.rewrittenContent,
         status: 'publish'
       });
       
@@ -65,14 +72,6 @@ export const Dashboard = () => {
       toast.error('Failed to publish article');
     }
   };
-
-  if (isLoading) {
-    return (
-      <div className="flex items-center justify-center h-screen">
-        <RefreshCw className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    );
-  }
 
   const recentArticles = articles?.filter(a => a.rewrittenContent) || [];
   const scheduledArticles = articles?.filter(a => a.status === 'scheduled' && a.scheduledTime) || [];
@@ -85,6 +84,15 @@ export const Dashboard = () => {
         onIntervalChange={handleIntervalChange}
         onRefresh={refreshFeeds}
       />
+
+      {isRefreshing && (
+        <Alert className="bg-blue-50 dark:bg-blue-900/20">
+          <Loader className="h-4 w-4 animate-spin text-blue-500 mr-2" />
+          <AlertDescription>
+            Fetching and processing new articles...
+          </AlertDescription>
+        </Alert>
+      )}
 
       <DashboardCards 
         feeds={feeds || []} 

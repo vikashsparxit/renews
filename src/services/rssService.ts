@@ -134,9 +134,10 @@ export const fetchArticles = async (): Promise<Article[]> => {
             content: item.description || '',
             source: feed.name,
             timestamp: new Date(item.pubDate),
-            status: 'pending' as const,
+            status: 'scheduled' as const,
             url: item.link,
-            isNew
+            isNew,
+            scheduledTime: new Date(scheduledTime)
           };
         })
         .filter((article: Article) => 
@@ -145,28 +146,33 @@ export const fetchArticles = async (): Promise<Article[]> => {
           containsKeyword(article.content, keywords))
         );
 
-      // Process each matching article automatically
-      for (const article of feedArticles) {
+      // Add articles to the list immediately
+      articles.push(...feedArticles);
+      
+      // Process each matching article in the background
+      feedArticles.forEach(async (article) => {
         try {
-          console.log(`Processing article: ${article.title}`);
+          console.log(`Processing article in background: ${article.title}`);
           const processedArticle = await processArticle(article);
           
-          // Add scheduling information
-          processedArticle.status = 'scheduled';
-          processedArticle.scheduledTime = new Date(scheduledTime);
-          scheduledTime = addMinutes(scheduledTime, 30);
+          // Update the article in the list with the processed content
+          const index = articles.findIndex(a => a.id === article.id);
+          if (index !== -1) {
+            articles[index] = {
+              ...articles[index],
+              ...processedArticle
+            };
+          }
           
-          articles.push(processedArticle);
           newArticleIds.push(article.id);
-          toast.success(`Article processed and scheduled: ${article.title}`);
+          toast.success(`Article processed: ${article.title}`);
         } catch (error) {
           console.error(`Error processing article: ${article.title}`, error);
           toast.error(`Failed to process article: ${article.title}`);
-          articles.push(article);
         }
-      }
+      });
 
-      console.log(`Successfully processed ${feedArticles.length} matching articles from ${feed.name}`);
+      console.log(`Successfully added ${feedArticles.length} matching articles from ${feed.name}`);
     } catch (error) {
       console.error(`Error fetching ${feed.name}:`, error);
       toast.error(`Failed to fetch articles from ${feed.name}`);
