@@ -1,13 +1,11 @@
 const DB_NAME = 'surinamNewsDB';
-const DB_VERSION = 3; // Incrementing version to force upgrade
+const DB_VERSION = 4; // Incrementing version to force upgrade
 const API_KEYS_STORE = 'apiKeys';
 const ARTICLE_STORE = 'articles';
 
 let db: IDBDatabase | null = null;
 
 const initDB = async (): Promise<IDBDatabase> => {
-  if (db) return db;
-
   return new Promise((resolve, reject) => {
     console.log('Initializing IndexedDB...');
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -26,27 +24,43 @@ const initDB = async (): Promise<IDBDatabase> => {
 
     request.onupgradeneeded = (event) => {
       console.log('Upgrading IndexedDB schema...');
-      const database = (event.target as IDBOpenDBRequest).result;
-      
-      // Create stores if they don't exist
-      if (!database.objectStoreNames.contains(API_KEYS_STORE)) {
-        database.createObjectStore(API_KEYS_STORE);
-        console.log('Created apiKeys store successfully');
+      const target = event.target as IDBOpenDBRequest;
+      const database = target.result;
+
+      // Delete existing stores if they exist
+      if (database.objectStoreNames.contains(API_KEYS_STORE)) {
+        database.deleteObjectStore(API_KEYS_STORE);
+      }
+      if (database.objectStoreNames.contains(ARTICLE_STORE)) {
+        database.deleteObjectStore(ARTICLE_STORE);
       }
       
-      if (!database.objectStoreNames.contains(ARTICLE_STORE)) {
-        const articleStore = database.createObjectStore(ARTICLE_STORE, { keyPath: 'url' });
-        articleStore.createIndex('timestamp', 'timestamp');
-        console.log('Created articles store successfully');
-      }
+      // Create stores
+      database.createObjectStore(API_KEYS_STORE);
+      console.log('Created apiKeys store successfully');
+      
+      const articleStore = database.createObjectStore(ARTICLE_STORE, { keyPath: 'url' });
+      articleStore.createIndex('timestamp', 'timestamp');
+      console.log('Created articles store successfully');
     };
   });
 };
 
 const getStore = async (storeName: string, mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> => {
-  const database = await initDB();
-  const transaction = database.transaction(storeName, mode);
-  return transaction.objectStore(storeName);
+  if (!db) {
+    db = await initDB();
+  }
+  
+  try {
+    const transaction = db.transaction(storeName, mode);
+    return transaction.objectStore(storeName);
+  } catch (error) {
+    console.error(`Error getting store ${storeName}:`, error);
+    // Re-initialize database if transaction fails
+    db = await initDB();
+    const transaction = db.transaction(storeName, mode);
+    return transaction.objectStore(storeName);
+  }
 };
 
 export const saveApiKey = async (key: string, value: string): Promise<void> => {
