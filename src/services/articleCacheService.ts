@@ -1,4 +1,6 @@
-interface Article {
+import { Article } from './articleService';
+
+interface CachedArticle {
   id: string;
   title: string;
   content: string;
@@ -9,52 +11,25 @@ interface Article {
   cacheDate: Date;
 }
 
-let db: IDBDatabase | null = null;
-const DB_NAME = 'renews_cache';
-const DB_VERSION = 1;
+const DB_NAME = 'surinamNewsDB';
 const STORE_NAME = 'articles';
 
-const initDB = async (): Promise<void> => {
-  if (db) return;
+let db: IDBDatabase | null = null;
 
-  return new Promise((resolve, reject) => {
-    console.log('Initializing IndexedDB...');
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
-
-    request.onerror = (event) => {
-      console.error('Error opening IndexedDB:', event);
-      reject(new Error('Failed to open IndexedDB'));
-    };
-
-    request.onsuccess = (event) => {
-      const target = event.target as IDBOpenDBRequest;
-      db = target.result;
-      console.log('IndexedDB opened successfully');
-      resolve();
-    };
-
-    request.onupgradeneeded = (event) => {
-      const target = event.target as IDBOpenDBRequest;
-      const database = target.result;
-      
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        const store = database.createObjectStore(STORE_NAME, { keyPath: 'url' });
-        store.createIndex('timestamp', 'timestamp');
-        console.log('Article store created successfully');
-      }
-    };
-  });
+const getStore = async (mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> => {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
+  const transaction = db.transaction(STORE_NAME, mode);
+  return transaction.objectStore(STORE_NAME);
 };
 
-export const saveArticleToCache = async (article: Article): Promise<void> => {
-  await initDB();
+export const saveArticleToCache = async (article: CachedArticle): Promise<void> => {
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
   
   return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     const request = store.put(article);
@@ -72,14 +47,11 @@ export const saveArticleToCache = async (article: Article): Promise<void> => {
 };
 
 export const getArticleFromCache = async (url: string): Promise<Article | undefined> => {
-  await initDB();
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
 
   return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-
     const transaction = db.transaction(STORE_NAME, 'readonly');
     const store = transaction.objectStore(STORE_NAME);
     const request = store.get(url);
@@ -96,14 +68,11 @@ export const getArticleFromCache = async (url: string): Promise<Article | undefi
 };
 
 export const clearExpiredCache = async (): Promise<void> => {
-  await initDB();
+  if (!db) {
+    throw new Error('Database not initialized');
+  }
 
   return new Promise((resolve, reject) => {
-    if (!db) {
-      reject(new Error('Database not initialized'));
-      return;
-    }
-
     const transaction = db.transaction(STORE_NAME, 'readwrite');
     const store = transaction.objectStore(STORE_NAME);
     const request = store.openCursor();
@@ -113,7 +82,7 @@ export const clearExpiredCache = async (): Promise<void> => {
     request.onsuccess = () => {
       const cursor = request.result;
       if (cursor) {
-        const article = cursor.value as Article;
+        const article = cursor.value as CachedArticle;
         if (now - new Date(article.cacheDate).getTime() > TWO_DAYS) {
           cursor.delete();
         }

@@ -1,6 +1,7 @@
 const DB_NAME = 'surinamNewsDB';
-const DB_VERSION = 2;
-const STORE_NAME = 'apiKeys';
+const DB_VERSION = 3; // Incrementing version to force upgrade
+const API_KEYS_STORE = 'apiKeys';
+const ARTICLE_STORE = 'articles';
 
 let db: IDBDatabase | null = null;
 
@@ -27,32 +28,33 @@ const initDB = async (): Promise<IDBDatabase> => {
       console.log('Upgrading IndexedDB schema...');
       const database = (event.target as IDBOpenDBRequest).result;
       
-      // Delete existing store if it exists
-      if (database.objectStoreNames.contains(STORE_NAME)) {
-        database.deleteObjectStore(STORE_NAME);
+      // Create stores if they don't exist
+      if (!database.objectStoreNames.contains(API_KEYS_STORE)) {
+        database.createObjectStore(API_KEYS_STORE);
+        console.log('Created apiKeys store successfully');
       }
       
-      // Create new store
-      database.createObjectStore(STORE_NAME);
-      console.log('Created apiKeys store successfully');
+      if (!database.objectStoreNames.contains(ARTICLE_STORE)) {
+        const articleStore = database.createObjectStore(ARTICLE_STORE, { keyPath: 'url' });
+        articleStore.createIndex('timestamp', 'timestamp');
+        console.log('Created articles store successfully');
+      }
     };
   });
+};
+
+const getStore = async (storeName: string, mode: IDBTransactionMode = 'readonly'): Promise<IDBObjectStore> => {
+  const database = await initDB();
+  const transaction = database.transaction(storeName, mode);
+  return transaction.objectStore(storeName);
 };
 
 export const saveApiKey = async (key: string, value: string): Promise<void> => {
   console.log(`Attempting to save ${key} to IndexedDB...`);
   try {
-    const database = await initDB();
+    const store = await getStore(API_KEYS_STORE, 'readwrite');
     
     return new Promise((resolve, reject) => {
-      const transaction = database.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      
-      transaction.onerror = (event) => {
-        console.error(`Transaction error while saving ${key}:`, event);
-        reject(new Error('Failed to save API key'));
-      };
-      
       const request = store.put(value, key);
       
       request.onsuccess = () => {
@@ -74,17 +76,10 @@ export const saveApiKey = async (key: string, value: string): Promise<void> => {
 export const getApiKey = async (key: string): Promise<string | null> => {
   console.log(`Attempting to retrieve ${key} from IndexedDB...`);
   try {
-    const database = await initDB();
+    const store = await getStore(API_KEYS_STORE);
     
     return new Promise((resolve, reject) => {
-      const transaction = database.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
       const request = store.get(key);
-      
-      transaction.onerror = (event) => {
-        console.error(`Transaction error while retrieving ${key}:`, event);
-        reject(new Error('Failed to retrieve API key'));
-      };
       
       request.onsuccess = () => {
         console.log(`Successfully retrieved ${key} from IndexedDB`);
