@@ -22,11 +22,12 @@ export interface Article {
   content: string;
   source: string;
   timestamp: Date;
-  status: 'pending' | 'published' | 'rejected' | 'scheduled';
+  status: 'pending' | 'published' | 'rejected' | 'scheduled' | 'error';
   url: string;
   scheduledTime?: Date;
   rewrittenContent?: string;
   isNew?: boolean;
+  error?: string;
 }
 
 interface ScheduleStore {
