@@ -98,7 +98,10 @@ export const Dashboard = () => {
 
   // Show crawled articles in Recent Articles, and fully processed ones in Scheduled
   const recentArticles = articles?.filter(a => a.content && !a.rewrittenContent) || [];
-  const scheduledArticles = articles?.filter(a => a.rewrittenContent && a.status === 'scheduled') || [];
+  const scheduledArticles = articles?.filter(a => 
+    a.rewrittenContent && 
+    a.status === 'scheduled'
+  ) || [];
 
   return (
     <>

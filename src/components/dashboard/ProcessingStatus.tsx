@@ -11,15 +11,10 @@ export const ProcessingStatus = () => {
   const totalArticles = articles?.length || 0;
   const crawledArticles = articles?.filter(a => a.content).length || 0;
   const processedArticles = articles?.filter(a => a.rewrittenContent).length || 0;
-  const scheduledArticles = articles?.filter(a => a.scheduledTime).length || 0;
+  const scheduledArticles = articles?.filter(a => a.rewrittenContent && a.status === 'scheduled').length || 0;
   const errorArticles = articles?.filter(a => a.status === 'error').length || 0;
   
   const processingProgress = totalArticles ? (processedArticles / totalArticles) * 100 : 0;
-
-  // Hide the status card if everything is complete and there are no errors
-  if (!isRefreshing && processedArticles === totalArticles && !errorArticles) {
-    return null;
-  }
 
   const stages = [
     {
@@ -45,16 +40,18 @@ export const ProcessingStatus = () => {
     {
       id: 'scheduling',
       label: `Scheduling Articles (${scheduledArticles}/${totalArticles})`,
-      status: processedArticles === totalArticles && scheduledArticles > 0 ? 'complete' : scheduledArticles > 0 ? 'active' : 'pending',
+      status: processedArticles === totalArticles && scheduledArticles > 0 ? 'complete' : 'pending',
     },
   ];
+
+  if (!isRefreshing && !totalArticles) return null;
 
   return (
     <Card className="mb-6">
       <CardHeader className="pb-3">
         <div className="flex items-center justify-between">
           <CardTitle className="text-base font-medium flex items-center gap-2">
-            <Loader2 className="h-4 w-4 animate-spin" />
+            {isRefreshing && <Loader2 className="h-4 w-4 animate-spin" />}
             Processing Status
           </CardTitle>
           {lastProcessedTime && (
@@ -92,10 +89,10 @@ export const ProcessingStatus = () => {
                 <div className="h-3 w-3 rounded-full border border-gray-300" />
               )}
               <span className={
-                stage.status === 'complete' 
-                  ? 'text-muted-foreground line-through' 
-                  : stage.status === 'active'
-                  ? 'text-blue-500'
+                stage.status === 'active' 
+                  ? 'text-blue-500 font-medium'
+                  : stage.status === 'complete'
+                  ? 'text-muted-foreground'
                   : ''
               }>
                 {stage.label}
