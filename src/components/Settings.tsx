@@ -27,24 +27,34 @@ export const Settings: React.FC<SettingsProps> = ({
   onOpenChange,
   onApiKeysSaved 
 }) => {
-  const [hasOpenAI, setHasOpenAI] = useState(false);
-  const [hasWordPress, setHasWordPress] = useState(false);
-  const [hasFirecrawl, setHasFirecrawl] = useState(false);
+  const [activeKeys, setActiveKeys] = useState({
+    openai: false,
+    wordpress: false,
+    firecrawl: false
+  });
   const [crawlingMethod, setCrawlingMethod] = useState('firecrawl');
 
   useEffect(() => {
     const checkExistingKeys = async () => {
-      const openai = await getApiKey('openai');
-      const wordpress = await getApiKey('wordpress');
-      const firecrawl = await getApiKey('firecrawl');
-      const siteUrl = await getApiKey('wordpressSiteUrl');
-      
-      setHasOpenAI(Boolean(openai));
-      setHasWordPress(Boolean(wordpress && siteUrl));
-      setHasFirecrawl(Boolean(firecrawl));
-      
-      const savedMethod = localStorage.getItem('crawling_method');
-      if (savedMethod) setCrawlingMethod(savedMethod);
+      try {
+        const [openai, wordpress, firecrawl, siteUrl] = await Promise.all([
+          getApiKey('openai'),
+          getApiKey('wordpress'),
+          getApiKey('firecrawl'),
+          getApiKey('wordpressSiteUrl')
+        ]);
+        
+        setActiveKeys({
+          openai: Boolean(openai),
+          wordpress: Boolean(wordpress && siteUrl),
+          firecrawl: Boolean(firecrawl)
+        });
+        
+        const savedMethod = localStorage.getItem('crawling_method');
+        if (savedMethod) setCrawlingMethod(savedMethod);
+      } catch (error) {
+        console.error('Error checking existing keys:', error);
+      }
     };
 
     checkExistingKeys();
@@ -77,17 +87,19 @@ export const Settings: React.FC<SettingsProps> = ({
           <TabsContent value="openai">
             <OpenAISettings 
               onApiKeySaved={onApiKeysSaved}
-              hasOpenAI={hasOpenAI}
+              hasOpenAI={activeKeys.openai}
             />
           </TabsContent>
           
           <TabsContent value="wordpress">
-            <WordPressSettings hasWordPress={hasWordPress} />
+            <WordPressSettings 
+              hasWordPress={activeKeys.wordpress} 
+            />
           </TabsContent>
           
           <TabsContent value="crawling">
             <CrawlingSettings
-              hasFirecrawl={hasFirecrawl}
+              hasFirecrawl={activeKeys.firecrawl}
               crawlingMethod={crawlingMethod}
               setCrawlingMethod={setCrawlingMethod}
             />

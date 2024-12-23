@@ -11,69 +11,95 @@ const initDB = async (): Promise<IDBDatabase> => {
     console.log('Initializing IndexedDB...');
     const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-    request.onerror = () => {
-      console.error('Error opening IndexedDB:', request.error);
-      reject(request.error);
+    request.onerror = (event) => {
+      console.error('Error opening IndexedDB:', event);
+      reject(new Error('Failed to open IndexedDB'));
     };
 
-    request.onsuccess = () => {
+    request.onsuccess = (event) => {
+      const target = event.target as IDBOpenDBRequest;
+      db = target.result;
       console.log('IndexedDB opened successfully');
-      db = request.result;
-      resolve(request.result);
+      resolve(db);
     };
 
-    request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
+    request.onupgradeneeded = (event) => {
       console.log('Upgrading IndexedDB schema...');
       const database = (event.target as IDBOpenDBRequest).result;
       
-      if (!database.objectStoreNames.contains(STORE_NAME)) {
-        database.createObjectStore(STORE_NAME);
+      // Delete existing store if it exists
+      if (database.objectStoreNames.contains(STORE_NAME)) {
+        database.deleteObjectStore(STORE_NAME);
       }
+      
+      // Create new store
+      database.createObjectStore(STORE_NAME);
+      console.log('Created apiKeys store successfully');
     };
   });
 };
 
 export const saveApiKey = async (key: string, value: string): Promise<void> => {
-  console.log(`Saving ${key} to IndexedDB...`);
-  const database = await initDB();
-  
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(STORE_NAME, 'readwrite');
-    const store = transaction.objectStore(STORE_NAME);
+  console.log(`Attempting to save ${key} to IndexedDB...`);
+  try {
+    const database = await initDB();
     
-    const request = store.put(value, key);
-    
-    request.onsuccess = () => {
-      console.log(`${key} saved successfully`);
-      resolve();
-    };
-    
-    request.onerror = () => {
-      console.error(`Error saving ${key}:`, request.error);
-      reject(request.error);
-    };
-  });
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, 'readwrite');
+      const store = transaction.objectStore(STORE_NAME);
+      
+      transaction.onerror = (event) => {
+        console.error(`Transaction error while saving ${key}:`, event);
+        reject(new Error('Failed to save API key'));
+      };
+      
+      const request = store.put(value, key);
+      
+      request.onsuccess = () => {
+        console.log(`Successfully saved ${key} to IndexedDB`);
+        resolve();
+      };
+      
+      request.onerror = (event) => {
+        console.error(`Error saving ${key}:`, event);
+        reject(new Error('Failed to save API key'));
+      };
+    });
+  } catch (error) {
+    console.error('Error in saveApiKey:', error);
+    throw error;
+  }
 };
 
 export const getApiKey = async (key: string): Promise<string | null> => {
-  console.log(`Retrieving ${key} from IndexedDB...`);
-  const database = await initDB();
-  
-  return new Promise((resolve, reject) => {
-    const transaction = database.transaction(STORE_NAME, 'readonly');
-    const store = transaction.objectStore(STORE_NAME);
-    const request = store.get(key);
+  console.log(`Attempting to retrieve ${key} from IndexedDB...`);
+  try {
+    const database = await initDB();
     
-    request.onsuccess = () => {
-      console.log(`${key} retrieved successfully`);
-      resolve(request.result || null);
-    };
-    
-    request.onerror = () => {
-      console.error(`Error retrieving ${key}:`, request.error);
-      reject(request.error);
-    };
-  });
+    return new Promise((resolve, reject) => {
+      const transaction = database.transaction(STORE_NAME, 'readonly');
+      const store = transaction.objectStore(STORE_NAME);
+      const request = store.get(key);
+      
+      transaction.onerror = (event) => {
+        console.error(`Transaction error while retrieving ${key}:`, event);
+        reject(new Error('Failed to retrieve API key'));
+      };
+      
+      request.onsuccess = () => {
+        console.log(`Successfully retrieved ${key} from IndexedDB`);
+        resolve(request.result || null);
+      };
+      
+      request.onerror = (event) => {
+        console.error(`Error retrieving ${key}:`, event);
+        reject(new Error('Failed to retrieve API key'));
+      };
+    });
+  } catch (error) {
+    console.error('Error in getApiKey:', error);
+    throw error;
+  }
 };
 
 export const saveAutoSchedule = async (enabled: boolean): Promise<void> => {
