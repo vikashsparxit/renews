@@ -5,14 +5,13 @@ import {
   DialogContent,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
   DialogDescription,
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Alert, AlertDescription } from "@/components/ui/alert";
-import { AlertTriangle, CheckCircle, Loader } from "lucide-react";
+import { AlertTriangle, CheckCircle, Key } from "lucide-react";
 import { useState, useEffect } from "react";
 import { toast } from "sonner";
 import { getApiKey, saveApiKey } from "@/services/storageService";
@@ -20,9 +19,17 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 
 interface SettingsProps {
   icon?: React.ReactNode;
+  open?: boolean;
+  onOpenChange?: (open: boolean) => void;
+  onApiKeysSaved?: () => void;
 }
 
-export const Settings: React.FC<SettingsProps> = ({ icon }) => {
+export const Settings: React.FC<SettingsProps> = ({ 
+  icon, 
+  open, 
+  onOpenChange,
+  onApiKeysSaved 
+}) => {
   const [openaiKey, setOpenaiKey] = useState('');
   const [wordpressKey, setWordpressKey] = useState('');
   const [firecrawlKey, setFirecrawlKey] = useState('');
@@ -45,7 +52,6 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
       
       if (siteUrl) setWordpressSiteUrl(siteUrl);
       
-      // Load saved crawling method
       const savedMethod = localStorage.getItem('crawling_method');
       if (savedMethod) setCrawlingMethod(savedMethod);
     };
@@ -59,6 +65,7 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
         await saveApiKey('openai', openaiKey);
         toast.success('OpenAI API key saved successfully');
         setHasOpenAI(true);
+        onApiKeysSaved?.();
       }
     } catch (error) {
       console.error('Error saving OpenAI key:', error);
@@ -126,11 +133,13 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
   };
 
   return (
-    <Dialog>
+    <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger asChild>
-        <Button variant="ghost" size="icon">
-          {icon}
-        </Button>
+        {icon && (
+          <Button variant="ghost" size="icon">
+            {icon}
+          </Button>
+        )}
       </DialogTrigger>
       <DialogContent className="sm:max-w-md">
         <DialogHeader>
@@ -149,10 +158,10 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
           
           <TabsContent value="openai" className="space-y-4">
             {!hasOpenAI && (
-              <Alert>
+              <Alert variant="destructive">
                 <AlertTriangle className="h-4 w-4" />
                 <AlertDescription>
-                  OpenAI API key is required for article rewriting.
+                  OpenAI API key is required for article rewriting. The dashboard will be blocked until you provide a valid API key.
                 </AlertDescription>
               </Alert>
             )}
@@ -166,7 +175,12 @@ export const Settings: React.FC<SettingsProps> = ({ icon }) => {
                 placeholder={hasOpenAI ? "API key is saved" : "Enter OpenAI API key"}
                 className={hasOpenAI ? "bg-gray-50" : ""}
               />
-              {renderKeyStatus("OpenAI", hasOpenAI)}
+              {hasOpenAI && (
+                <div className="text-sm text-green-600 flex items-center gap-2 mt-1">
+                  <CheckCircle className="h-4 w-4" />
+                  <span>OpenAI key is saved and active</span>
+                </div>
+              )}
             </div>
             <Button onClick={handleSaveOpenAI} className="w-full">
               Save OpenAI Settings

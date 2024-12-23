@@ -11,23 +11,45 @@ import { Alert, AlertDescription } from "@/components/ui/alert";
 import { Loader } from "lucide-react";
 import { getApiKey } from "@/services/storageService";
 import { publishToWordPress } from "@/services/wordpressService";
+import { Settings } from "./Settings";
 
 export const Dashboard = () => {
   const { feeds, articles, isLoading, isRefreshing, refresh } = useRSSFeeds();
   const { interval, setInterval, lastFetch } = useScheduleStore();
   const [inputInterval, setInputInterval] = useState(interval.toString());
+  const [hasOpenAI, setHasOpenAI] = useState(false);
+  const [showSettingsModal, setShowSettingsModal] = useState(false);
   
+  useEffect(() => {
+    const checkOpenAIKey = async () => {
+      const openaiKey = await getApiKey('openai');
+      setHasOpenAI(Boolean(openaiKey));
+      if (!openaiKey) {
+        setShowSettingsModal(true);
+      }
+    };
+    
+    checkOpenAIKey();
+  }, []);
+
   const refreshFeeds = useCallback(() => {
+    if (!hasOpenAI) {
+      toast.error('OpenAI API key is required to process articles');
+      setShowSettingsModal(true);
+      return;
+    }
     refresh();
-  }, [refresh]);
+  }, [refresh, hasOpenAI]);
 
   useEffect(() => {
+    if (!hasOpenAI) return;
+    
     const timerId = window.setInterval(() => {
       refreshFeeds();
     }, interval * 60 * 1000);
 
     return () => window.clearInterval(timerId);
-  }, [interval, refreshFeeds]);
+  }, [interval, refreshFeeds, hasOpenAI]);
 
   const handleIntervalChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
@@ -79,36 +101,49 @@ export const Dashboard = () => {
   const scheduledArticles = articles?.filter(a => a.status === 'scheduled' && a.scheduledTime) || [];
 
   return (
-    <div className="p-6 space-y-6">
-      <DashboardHeader
-        inputInterval={inputInterval}
-        isRefreshing={isRefreshing}
-        onIntervalChange={handleIntervalChange}
-        onRefresh={refreshFeeds}
-      />
+    <>
+      <div className={`p-6 space-y-6 ${!hasOpenAI ? 'blur-sm pointer-events-none' : ''}`}>
+        <DashboardHeader
+          inputInterval={inputInterval}
+          isRefreshing={isRefreshing}
+          onIntervalChange={handleIntervalChange}
+          onRefresh={refreshFeeds}
+        />
 
-      <ProcessingStatus />
+        <ProcessingStatus />
 
-      {isRefreshing && (
-        <Alert className="bg-blue-50 dark:bg-blue-900/20">
-          <Loader className="h-4 w-4 animate-spin text-blue-500 mr-2" />
-          <AlertDescription>
-            Fetching and processing new articles...
-          </AlertDescription>
-        </Alert>
+        {isRefreshing && (
+          <Alert className="bg-blue-50 dark:bg-blue-900/20">
+            <Loader className="h-4 w-4 animate-spin text-blue-500 mr-2" />
+            <AlertDescription>
+              Fetching and processing new articles...
+            </AlertDescription>
+          </Alert>
+        )}
+
+        <DashboardCards 
+          feeds={feeds || []} 
+          lastFetch={lastFetch}
+        />
+
+        <ArticleCards
+          recentArticles={recentArticles}
+          scheduledArticles={scheduledArticles}
+          onHoldArticle={handleHoldArticle}
+          onPublishArticle={handlePublishArticle}
+        />
+      </div>
+
+      {showSettingsModal && (
+        <Settings
+          open={showSettingsModal}
+          onOpenChange={setShowSettingsModal}
+          onApiKeysSaved={() => {
+            setHasOpenAI(true);
+            setShowSettingsModal(false);
+          }}
+        />
       )}
-
-      <DashboardCards 
-        feeds={feeds || []} 
-        lastFetch={lastFetch}
-      />
-
-      <ArticleCards
-        recentArticles={recentArticles}
-        scheduledArticles={scheduledArticles}
-        onHoldArticle={handleHoldArticle}
-        onPublishArticle={handlePublishArticle}
-      />
-    </div>
+    </>
   );
 };
