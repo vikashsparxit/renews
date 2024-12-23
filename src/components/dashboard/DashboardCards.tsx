@@ -18,14 +18,7 @@ export const DashboardCards = ({ feeds, lastFetch }: DashboardCardsProps) => {
           <CardTitle className="text-primary">Keyword Management</CardTitle>
         </CardHeader>
         <CardContent>
-          {!feeds?.length ? (
-            <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
-              <AlertCircle className="h-12 w-12 mb-4" />
-              <p>No keywords configured yet. Add keywords to filter articles based on your interests.</p>
-            </div>
-          ) : (
-            <KeywordManager />
-          )}
+          <KeywordManager />
         </CardContent>
       </Card>
 
@@ -37,14 +30,7 @@ export const DashboardCards = ({ feeds, lastFetch }: DashboardCardsProps) => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          {!feeds?.length ? (
-            <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
-              <AlertCircle className="h-12 w-12 mb-4" />
-              <p>No RSS feeds configured. Add feeds to start aggregating news articles.</p>
-            </div>
-          ) : (
-            <RSSFeedManager />
-          )}
+          <RSSFeedManager />
           {lastFetch && (
             <div className="text-sm text-muted-foreground mt-4 italic">
               Last fetch: {formatDistanceToNow(lastFetch)} ago
