@@ -1,6 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { AlertCircle } from "lucide-react";
-import { Article } from "@/services/articleService";
+import { Article } from "@/services/types";
 import { ArticleList } from "./ArticleList";
 import { ScheduledArticleList } from "./ScheduledArticleList";
 
