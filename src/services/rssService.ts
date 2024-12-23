@@ -5,7 +5,29 @@ import { clearExpiredCache } from './articleCacheService';
 import { toast } from "sonner";
 import { useFeedStore, fetchFeedContent } from './feedUtils';
 import { checkArticleKeywords } from './keywordUtils';
-import { Article } from './types';
+
+// Export the Article type
+export interface Article {
+  id: string;
+  title: string;
+  content: string;
+  source: string;
+  timestamp: Date;
+  status: 'pending' | 'published' | 'rejected' | 'scheduled' | 'error';
+  url: string;
+  scheduledTime?: Date;
+  rewrittenContent?: string;
+  isNew?: boolean;
+  error?: string;
+}
+
+// Export the RSSFeed type
+export interface RSSFeed {
+  name: string;
+  url: string;
+  status: 'active' | 'error';
+  lastUpdate: Date;
+}
 
 interface ScheduleStore {
   interval: number;
