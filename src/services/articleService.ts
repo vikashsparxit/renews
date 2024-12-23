@@ -11,10 +11,11 @@ export interface Article {
   rewrittenContent?: string;
   source: string;
   timestamp: Date;
-  status: 'pending' | 'published' | 'rejected' | 'scheduled';
+  status: 'pending' | 'published' | 'rejected' | 'scheduled' | 'error';
   url: string;
   scheduledTime?: Date;
   isNew?: boolean;
+  error?: string;
 }
 
 export const processArticle = async (article: Article): Promise<Article> => {

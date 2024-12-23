@@ -1,16 +1,18 @@
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2 } from "lucide-react";
+import { Loader2, CheckCircle2, AlertCircle } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
 
 export const ProcessingStatus = () => {
   const { articles, isRefreshing } = useRSSFeeds();
   
   const totalArticles = articles?.length || 0;
-  const processedArticles = articles?.filter(a => a.rewrittenContent).length || 0;
+  const processedArticles = articles?.filter(a => a.rewrittenContent || a.status === 'error').length || 0;
+  const errorArticles = articles?.filter(a => a.status === 'error').length || 0;
   const processingProgress = totalArticles ? (processedArticles / totalArticles) * 100 : 0;
 
-  if (!isRefreshing && processedArticles === totalArticles) {
+  if (!isRefreshing && processedArticles === totalArticles && !errorArticles) {
     return null;
   }
 
@@ -26,15 +28,37 @@ export const ProcessingStatus = () => {
         <div className="space-y-1">
           <div className="flex items-center justify-between text-sm">
             <span>Articles Processing</span>
-            <span>{processedArticles}/{totalArticles}</span>
+            <div className="flex items-center gap-2">
+              <span>{processedArticles}/{totalArticles}</span>
+              {errorArticles > 0 && (
+                <Badge variant="destructive" className="text-xs">
+                  {errorArticles} failed
+                </Badge>
+              )}
+            </div>
           </div>
           <Progress value={processingProgress} className="h-2" />
         </div>
-        {isRefreshing && (
-          <div className="text-sm text-muted-foreground">
-            Fetching new articles...
-          </div>
-        )}
+        <div className="text-sm space-y-2">
+          {isRefreshing && (
+            <div className="flex items-center gap-2 text-muted-foreground">
+              <Loader2 className="h-3 w-3 animate-spin" />
+              Fetching new articles...
+            </div>
+          )}
+          {processedArticles > 0 && (
+            <div className="flex items-center gap-2 text-green-600">
+              <CheckCircle2 className="h-3 w-3" />
+              {processedArticles} articles processed
+            </div>
+          )}
+          {errorArticles > 0 && (
+            <div className="flex items-center gap-2 text-red-500">
+              <AlertCircle className="h-3 w-3" />
+              {errorArticles} articles failed to process
+            </div>
+          )}
+        </div>
       </CardContent>
     </Card>
   );
