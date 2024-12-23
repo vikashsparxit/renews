@@ -1,7 +1,7 @@
 import { useRSSFeeds } from "@/hooks/useRSSFeeds";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
-import { Loader2, CheckCircle2, AlertCircle, Clock } from "lucide-react";
+import { Loader2, CheckCircle2, Clock } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import { format } from "date-fns";
 
@@ -9,8 +9,8 @@ export const ProcessingStatus = () => {
   const { articles, isRefreshing, lastProcessedTime } = useRSSFeeds();
   
   const totalArticles = articles?.length || 0;
-  const processedArticles = articles?.filter(a => a.rewrittenContent || a.status === 'error').length || 0;
   const crawledArticles = articles?.filter(a => a.content).length || 0;
+  const processedArticles = articles?.filter(a => a.rewrittenContent).length || 0;
   const scheduledArticles = articles?.filter(a => a.scheduledTime).length || 0;
   const errorArticles = articles?.filter(a => a.status === 'error').length || 0;
   
@@ -45,7 +45,7 @@ export const ProcessingStatus = () => {
     {
       id: 'scheduling',
       label: `Scheduling Articles (${scheduledArticles}/${totalArticles})`,
-      status: scheduledArticles === totalArticles ? 'complete' : scheduledArticles > 0 ? 'active' : 'pending',
+      status: processedArticles === totalArticles && scheduledArticles > 0 ? 'complete' : scheduledArticles > 0 ? 'active' : 'pending',
     },
   ];
 
@@ -102,13 +102,6 @@ export const ProcessingStatus = () => {
               </span>
             </div>
           ))}
-          
-          {errorArticles > 0 && (
-            <div className="flex items-center gap-2 text-sm text-red-500">
-              <AlertCircle className="h-3 w-3" />
-              {errorArticles} articles failed to process
-            </div>
-          )}
         </div>
       </CardContent>
     </Card>

@@ -96,9 +96,9 @@ export const Dashboard = () => {
     }
   };
 
-  // Filter articles that have completed processing for Recent Articles
-  const recentArticles = articles?.filter(a => a.rewrittenContent) || [];
-  const scheduledArticles = articles?.filter(a => a.status === 'scheduled' && a.scheduledTime) || [];
+  // Show crawled articles in Recent Articles, and fully processed ones in Scheduled
+  const recentArticles = articles?.filter(a => a.content && !a.rewrittenContent) || [];
+  const scheduledArticles = articles?.filter(a => a.rewrittenContent && a.status === 'scheduled') || [];
 
   return (
     <>
@@ -134,16 +134,18 @@ export const Dashboard = () => {
         />
       </div>
 
-      {showSettingsModal && (
-        <Settings
-          open={showSettingsModal}
-          onOpenChange={setShowSettingsModal}
-          onApiKeysSaved={() => {
-            setHasOpenAI(true);
-            setShowSettingsModal(false);
-          }}
-        />
-      )}
+      <Settings
+        open={showSettingsModal || !hasOpenAI}
+        onOpenChange={(open) => {
+          // Only allow closing if we have OpenAI key
+          if (!open && !hasOpenAI) return;
+          setShowSettingsModal(open);
+        }}
+        onApiKeysSaved={() => {
+          setHasOpenAI(true);
+          setShowSettingsModal(false);
+        }}
+      />
     </>
   );
 };
