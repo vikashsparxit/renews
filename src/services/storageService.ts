@@ -2,7 +2,11 @@ const DB_NAME = 'surinamNewsDB';
 const DB_VERSION = 2;
 const STORE_NAME = 'apiKeys';
 
-const initDB = (): Promise<IDBDatabase> => {
+let db: IDBDatabase | null = null;
+
+const initDB = async (): Promise<IDBDatabase> => {
+  if (db) return db;
+
   return new Promise((resolve, reject) => {
     console.log('Initializing IndexedDB...');
     const request = indexedDB.open(DB_NAME, DB_VERSION);
@@ -14,15 +18,16 @@ const initDB = (): Promise<IDBDatabase> => {
 
     request.onsuccess = () => {
       console.log('IndexedDB opened successfully');
+      db = request.result;
       resolve(request.result);
     };
 
     request.onupgradeneeded = (event: IDBVersionChangeEvent) => {
       console.log('Upgrading IndexedDB schema...');
-      const db = (event.target as IDBOpenDBRequest).result;
+      const database = (event.target as IDBOpenDBRequest).result;
       
-      if (!db.objectStoreNames.contains(STORE_NAME)) {
-        db.createObjectStore(STORE_NAME);
+      if (!database.objectStoreNames.contains(STORE_NAME)) {
+        database.createObjectStore(STORE_NAME);
       }
     };
   });
@@ -30,62 +35,44 @@ const initDB = (): Promise<IDBDatabase> => {
 
 export const saveApiKey = async (key: string, value: string): Promise<void> => {
   console.log(`Saving ${key} to IndexedDB...`);
-  const db = await initDB();
+  const database = await initDB();
   
   return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction(STORE_NAME, 'readwrite');
-      const store = transaction.objectStore(STORE_NAME);
-      
-      const request = store.put(value, key);
-      
-      request.onsuccess = () => {
-        console.log(`${key} saved successfully`);
-        resolve();
-      };
-      
-      request.onerror = () => {
-        console.error(`Error saving ${key}:`, request.error);
-        reject(request.error);
-      };
-      
-      transaction.oncomplete = () => db.close();
-      transaction.onerror = () => {
-        console.error('Transaction error:', transaction.error);
-        reject(transaction.error);
-      };
-    } catch (error) {
-      console.error('Error in saveApiKey transaction:', error);
-      reject(error);
-    }
+    const transaction = database.transaction(STORE_NAME, 'readwrite');
+    const store = transaction.objectStore(STORE_NAME);
+    
+    const request = store.put(value, key);
+    
+    request.onsuccess = () => {
+      console.log(`${key} saved successfully`);
+      resolve();
+    };
+    
+    request.onerror = () => {
+      console.error(`Error saving ${key}:`, request.error);
+      reject(request.error);
+    };
   });
 };
 
 export const getApiKey = async (key: string): Promise<string | null> => {
   console.log(`Retrieving ${key} from IndexedDB...`);
-  const db = await initDB();
+  const database = await initDB();
   
   return new Promise((resolve, reject) => {
-    try {
-      const transaction = db.transaction(STORE_NAME, 'readonly');
-      const store = transaction.objectStore(STORE_NAME);
-      const request = store.get(key);
-      
-      request.onsuccess = () => {
-        console.log(`${key} retrieved successfully`);
-        resolve(request.result || null);
-      };
-      
-      request.onerror = () => {
-        console.error(`Error retrieving ${key}:`, request.error);
-        reject(request.error);
-      };
-      
-      transaction.oncomplete = () => db.close();
-    } catch (error) {
-      console.error('Error in getApiKey:', error);
-      reject(error);
-    }
+    const transaction = database.transaction(STORE_NAME, 'readonly');
+    const store = transaction.objectStore(STORE_NAME);
+    const request = store.get(key);
+    
+    request.onsuccess = () => {
+      console.log(`${key} retrieved successfully`);
+      resolve(request.result || null);
+    };
+    
+    request.onerror = () => {
+      console.error(`Error retrieving ${key}:`, request.error);
+      reject(request.error);
+    };
   });
 };
 
