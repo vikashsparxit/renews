@@ -17,13 +17,13 @@ export const ArticleCards = ({
   onHoldArticle,
   onPublishArticle
 }: ArticleCardsProps) => {
-  // Filter for completed articles only
-  const completedArticles = recentArticles.filter(article => 
-    article.rewrittenContent && article.status !== 'error'
+  // Show all articles that have been crawled but not yet rewritten
+  const crawledArticles = recentArticles.filter(article => 
+    article.content && article.status !== 'error'
   );
 
-  // Filter for ready to publish articles
-  const readyToPublishArticles = scheduledArticles.filter(article => 
+  // Show all articles that have been successfully rewritten
+  const rewrittenArticles = scheduledArticles.filter(article => 
     article.rewrittenContent && article.status !== 'error'
   );
 
@@ -34,30 +34,30 @@ export const ArticleCards = ({
           <CardTitle>Recent Articles</CardTitle>
         </CardHeader>
         <CardContent>
-          {!completedArticles.length ? (
+          {!crawledArticles.length ? (
             <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mb-4" />
-              <p>No articles have been processed yet. Articles matching your keywords will appear here after processing.</p>
+              <p>No articles have been crawled yet. Articles matching your keywords will appear here after crawling.</p>
             </div>
           ) : (
-            <ArticleList articles={completedArticles} />
+            <ArticleList articles={crawledArticles} />
           )}
         </CardContent>
       </Card>
 
       <Card>
         <CardHeader>
-          <CardTitle>Scheduled Posts</CardTitle>
+          <CardTitle>Rewritten Posts</CardTitle>
         </CardHeader>
         <CardContent>
-          {!readyToPublishArticles.length ? (
+          {!rewrittenArticles.length ? (
             <div className="flex flex-col items-center justify-center text-center p-6 text-muted-foreground">
               <AlertCircle className="h-12 w-12 mb-4" />
-              <p>No articles are currently ready for publishing. Articles will appear here once processing is complete.</p>
+              <p>No articles have been rewritten yet. Articles will appear here once OpenAI processing is complete.</p>
             </div>
           ) : (
             <ScheduledArticleList 
-              articles={readyToPublishArticles}
+              articles={rewrittenArticles}
               onHoldArticle={onHoldArticle}
               onPublishArticle={onPublishArticle}
             />

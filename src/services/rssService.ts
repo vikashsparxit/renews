@@ -81,8 +81,23 @@ export const useScheduleStore = create<ScheduleStore>((set) => ({
 
 const containsKeyword = (text: string, keywords: Array<{ text: string, active: boolean }>) => {
   const activeKeywords = keywords.filter(k => k.active);
+  console.log('Active keywords:', activeKeywords);
+  
+  if (activeKeywords.length === 0) {
+    console.log('No active keywords, allowing all articles');
+    return true; // If no keywords are set, accept all articles
+  }
+  
   const lowerText = text.toLowerCase();
-  return activeKeywords.some(keyword => lowerText.includes(keyword.text.toLowerCase()));
+  console.log('Checking text:', lowerText);
+  
+  const matches = activeKeywords.filter(keyword => {
+    const isMatch = lowerText.includes(keyword.text.toLowerCase());
+    console.log(`Keyword "${keyword.text}": ${isMatch ? 'matched' : 'no match'}`);
+    return isMatch;
+  });
+  
+  return matches.length > 0;
 };
 
 const isWithinLast48Hours = (date: Date) => {
@@ -146,6 +161,8 @@ export const fetchArticles = async (): Promise<Article[]> => {
   const parser = new XMLParser();
   const articles: Article[] = [];
   const keywords = useKeywordStore.getState().keywords;
+  console.log('Current keywords:', keywords);
+  
   let scheduledTime = new Date();
   scheduledTime = addMinutes(scheduledTime, 30);
 
@@ -161,34 +178,45 @@ export const fetchArticles = async (): Promise<Article[]> => {
 
       const result = parser.parse(response.data);
       const items = result.rss?.channel?.item || [];
-      console.log(`Parsing ${items.length} items from ${feed.name}`);
+      console.log(`Found ${items.length} items in ${feed.name}`);
 
       const feedArticles = items
         .map((item: any) => {
           const articleId = item.guid || item.link;
           const isNew = !previousArticleIds.includes(articleId);
-          return {
+          const article = {
             id: articleId,
             title: item.title,
             content: item.description || '',
             source: feed.name,
             timestamp: new Date(item.pubDate),
-            status: 'scheduled' as const,
+            status: 'pending' as const,
             url: item.link,
             isNew,
             scheduledTime: new Date(scheduledTime)
           };
+          
+          // Log keyword matching results
+          console.log(`Checking article: ${article.title}`);
+          const matchesTitle = containsKeyword(article.title, keywords);
+          const matchesContent = containsKeyword(article.content, keywords);
+          console.log(`Title match: ${matchesTitle}, Content match: ${matchesContent}`);
+          
+          return article;
         })
-        .filter((article: Article) => 
-          isWithinLast48Hours(article.timestamp) && 
-          (containsKeyword(article.title, keywords) || 
-          containsKeyword(article.content, keywords))
-        );
+        .filter((article: Article) => {
+          const isRecent = isWithinLast48Hours(article.timestamp);
+          const matchesKeywords = containsKeyword(article.title, keywords) || 
+                                containsKeyword(article.content, keywords);
+          
+          console.log(`Article "${article.title}": Recent: ${isRecent}, Matches Keywords: ${matchesKeywords}`);
+          return isRecent && matchesKeywords;
+        });
 
-      // Add articles to the list immediately
+      console.log(`${feedArticles.length} articles matched criteria from ${feed.name}`);
       articles.push(...feedArticles);
       
-      // Process each matching article in the background
+      // Process each matching article
       feedArticles.forEach(async (article) => {
         try {
           console.log(`Processing article in background: ${article.title}`);
@@ -220,8 +248,6 @@ export const fetchArticles = async (): Promise<Article[]> => {
           }
         }
       });
-
-      console.log(`Successfully added ${feedArticles.length} matching articles from ${feed.name}`);
     } catch (error) {
       console.error(`Error fetching ${feed.name}:`, error);
       toast.error(`Failed to fetch articles from ${feed.name}`);

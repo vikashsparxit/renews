@@ -96,11 +96,13 @@ export const Dashboard = () => {
     }
   };
 
-  // Show crawled articles in Recent Articles, and fully processed ones in Scheduled
-  const recentArticles = articles?.filter(a => a.content && !a.rewrittenContent) || [];
-  const scheduledArticles = articles?.filter(a => 
+  // Show crawled articles in Recent Articles
+  const recentArticles = articles?.filter(a => a.content) || [];
+  
+  // Show rewritten articles in Rewritten Posts
+  const rewrittenArticles = articles?.filter(a => 
     a.rewrittenContent && 
-    a.status === 'scheduled'
+    a.status !== 'error'
   ) || [];
 
   return (
@@ -131,7 +133,7 @@ export const Dashboard = () => {
 
         <ArticleCards
           recentArticles={recentArticles}
-          scheduledArticles={scheduledArticles}
+          scheduledArticles={rewrittenArticles}
           onHoldArticle={handleHoldArticle}
           onPublishArticle={handlePublishArticle}
         />
